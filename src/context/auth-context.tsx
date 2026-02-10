@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import type { User, UserRole } from '@/lib/types';
 import { mockUsers } from '@/lib/data';
 
@@ -19,7 +19,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
-  const pathname = usePathname();
 
   useEffect(() => {
     // Simulate checking for a stored session
@@ -50,13 +49,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const isAuthenticated = !!user;
-
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated && pathname.startsWith('/dashboard')) {
-      router.push('/');
-    }
-  }, [isLoading, isAuthenticated, pathname, router]);
-
 
   return (
     <AuthContext.Provider value={{ user, isAuthenticated, isLoading, login, logout }}>
