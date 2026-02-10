@@ -38,7 +38,8 @@ import {
   FileText,
   Contact,
   Briefcase,
-  ChevronDown
+  ChevronDown,
+  Database
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
@@ -57,6 +58,7 @@ const adminNavItems = [
     { href: '/dashboard/empleados', label: 'Empleados', icon: Users, roles: ['admin'] },
     { href: '/dashboard/clientes', label: 'Clientes', icon: Contact, roles: ['admin', 'operations'] },
     { href: '/dashboard/suplidores', label: 'Suplidores', icon: Building, roles: ['admin'] },
+    { href: '/dashboard/base-de-datos', label: 'Base de Datos', icon: Database, roles: ['admin'] },
     { href: '/dashboard/ingresos', label: 'Ingresos', icon: TrendingUp, roles: ['admin', 'finance'] },
     { href: '/dashboard/gastos', label: 'Gastos', icon: TrendingDown, roles: ['admin', 'finance'] },
     { href: '/dashboard/cuentas-por-pagar', label: 'Cuentas por Pagar', icon: ArrowDownCircle, roles: ['admin', 'finance'] },
