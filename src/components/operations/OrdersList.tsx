@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Search, Filter, RefreshCw, MoreHorizontal } from "lucide-react";
 import { Checkbox } from '../ui/checkbox';
+import { Card } from '../ui/card';
 
 interface OrdersListProps {
   orders: Order[];

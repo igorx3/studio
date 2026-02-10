@@ -2,7 +2,6 @@
 
 import React, { useState, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Upload, Download, FileDown, List, Kanban } from "lucide-react";
 import { mockOrders } from "@/lib/data";
@@ -10,11 +9,11 @@ import type { Order, OrderStatus } from "@/lib/types";
 import { OrdersList } from './OrdersList';
 import { OrdersKanban } from './OrdersKanban';
 
-const submenuItems: { label: string, statusFilter: OrderStatus[] | null }[] = [
-    { label: 'Nuevos', statusFilter: ['Generado', 'Nuevo'] },
+const submenuItems: { label: string; statusFilter: (OrderStatus | OrderStatus[]) | null }[] = [
+    { label: 'Nuevos', statusFilter: 'Generado' },
     { label: 'Confirmados', statusFilter: ['Confirmado', 'Confirmado para la tarde'] },
-    { label: 'Novedad', statusFilter: ['Novedad', 'NOVEDAD 2'] },
-    { label: 'Pendientes', statusFilter: ['Pendiente Respuesta', 'Llamar', 'Pendiente'] },
+    { label: 'Novedad', statusFilter: 'Novedad' },
+    { label: 'Pendientes', statusFilter: ['Pendiente Respuesta', 'Llamar'] },
     { label: 'Todos', statusFilter: null },
 ];
 
@@ -29,7 +28,14 @@ export function OrdersModule() {
     if (!activeFilter || !activeFilter.statusFilter) {
       return orders;
     }
-    return orders.filter(order => activeFilter.statusFilter!.includes(order.status));
+    
+    const filterValue = activeFilter.statusFilter;
+
+    if (Array.isArray(filterValue)) {
+      return orders.filter(order => filterValue.includes(order.status));
+    }
+    
+    return orders.filter(order => order.status === filterValue);
   }, [orders, activeSubMenu]);
 
   return (
@@ -58,18 +64,19 @@ export function OrdersModule() {
 
         <Tabs defaultValue="list" value={view} onValueChange={(v) => setView(v as 'list' | 'kanban')} className="w-full">
             <div className="flex justify-between items-center">
-                <TabsList className="bg-muted text-muted-foreground">
-                    {submenuItems.map(item => (
-                        <TabsTrigger 
-                            key={item.label} 
-                            value={item.label}
-                            className={`data-[state=active]:bg-background data-[state=active]:text-foreground ${activeSubMenu === item.label ? 'bg-background text-foreground' : ''}`}
-                            onClick={() => setActiveSubMenu(item.label)}
-                        >
-                            {item.label}
-                        </TabsTrigger>
-                    ))}
-                </TabsList>
+                <Tabs value={activeSubMenu} onValueChange={setActiveSubMenu} defaultValue="Todos">
+                    <TabsList className="bg-muted text-muted-foreground">
+                        {submenuItems.map(item => (
+                            <TabsTrigger 
+                                key={item.label} 
+                                value={item.label}
+                                className="data-[state=active]:bg-background data-[state=active]:text-foreground"
+                            >
+                                {item.label}
+                            </TabsTrigger>
+                        ))}
+                    </TabsList>
+                </Tabs>
                 <TabsList>
                     <TabsTrigger value="list"><List className="h-4 w-4"/></TabsTrigger>
                     <TabsTrigger value="kanban"><Kanban className="h-4 w-4" /></TabsTrigger>
