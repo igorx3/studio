@@ -11,7 +11,7 @@ export default function ClientPortalPage() {
                 <h2 className="text-2xl font-bold tracking-tight">Portal de Cliente</h2>
                 <p className="text-muted-foreground">Gestiona tus pedidos y tu cuenta.</p>
             </div>
-            <Button>
+            <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Crear Nuevo Pedido
             </Button>

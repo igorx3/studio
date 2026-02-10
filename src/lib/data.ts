@@ -2,7 +2,7 @@ import type { User, Order, UserRole } from './types';
 
 export const mockUsers: Record<UserRole, User> = {
   admin: {
-    name: 'Admin User',
+    name: 'Igor Rodriguez',
     email: 'admin@khlothia.pack',
     role: 'admin',
     avatarUrl: 'https://picsum.photos/seed/admin/100/100'
