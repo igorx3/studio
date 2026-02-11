@@ -232,7 +232,8 @@ export type InventoryMovementType =
   | 'manual_entry'
   | 'manual_exit'
   | 'adjustment'
-  | 'shrinkage';
+  | 'shrinkage'
+  | 'initial_stock';
 
 export interface InventoryMovement {
   id: string;
@@ -243,7 +244,7 @@ export interface InventoryMovement {
   storeName: string;
   movementType: InventoryMovementType;
   referenceId: string; // Order tracking ID or adjustment ID
-  referenceType: 'order' | 'entry' | 'exit' | 'adjustment';
+  referenceType: 'order' | 'entry' | 'exit' | 'adjustment' | 'item_creation';
   quantity: number; // +N for entry, -N for exit
   stockBefore: number;
   stockAfter: number;

@@ -12,8 +12,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Paperclip } from 'lucide-react';
-import type { InventoryItem, Store, User, SubLocation } from '@/lib/types';
+import type { InventoryItem, Store, User, SubLocation, InventoryMovement } from '@/lib/types';
 import { useAuth } from '@/context/auth-context';
+import { FirebaseContext } from '@/firebase/context';
+import { collection, addDoc, serverTimestamp, getDocs, query, where, runTransaction, doc, writeBatch } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import Image from 'next/image';
 
 interface ArticleFormDialogProps {
@@ -44,78 +47,51 @@ const formSchema = z.object({
   photo: z.any().optional(),
 });
 
+type FormData = z.infer<typeof formSchema>;
+
 export function ArticleFormDialog({ isOpen, onOpenChange, article, stores }: ArticleFormDialogProps) {
   const { user } = useAuth();
+  const { firestore, storage } = useContext(FirebaseContext);
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: '',
-      sku: '',
-      storeId: '',
-      declaredValue: 0,
-      stockAvailable: 0,
-      minStock: 10,
-      category: '',
-      description: '',
-      barcode: '',
-      warehouseLocation: undefined,
-      weight: 0,
-      length: 0,
-      width: 0,
-      height: 0,
-      expirationDate: '',
-      photo: undefined,
-    },
   });
 
   useEffect(() => {
-    if (article) {
-      form.reset({
-        name: article.name,
-        sku: article.sku,
-        storeId: article.storeId,
-        declaredValue: article.declaredValue,
-        stockAvailable: article.stockAvailable,
-        minStock: article.minStock,
-        category: article.category,
-        description: article.description,
-        barcode: article.barcode,
-        warehouseLocation: article.warehouseLocation,
-        weight: article.weight,
-        length: article.dimensions?.length,
-        width: article.dimensions?.width,
-        height: article.dimensions?.height,
-        expirationDate: article.expirationDate ? new Date(article.expirationDate).toISOString().split('T')[0] : '',
-      });
-      if (article.photos && article.photos.length > 0) {
-        setPreviewImage(article.photos[0]);
+    if (isOpen) {
+      if (article) {
+        form.reset({
+          name: article.name,
+          sku: article.sku,
+          storeId: article.storeId,
+          declaredValue: article.declaredValue,
+          stockAvailable: article.stockAvailable,
+          minStock: article.minStock,
+          category: article.category,
+          description: article.description,
+          barcode: article.barcode,
+          warehouseLocation: article.warehouseLocation,
+          weight: article.weight,
+          length: article.dimensions?.length,
+          width: article.dimensions?.width,
+          height: article.dimensions?.height,
+          expirationDate: article.expirationDate ? new Date(article.expirationDate.seconds * 1000).toISOString().split('T')[0] : '',
+        });
+        setPreviewImage(article.photos?.[0] || null);
+      } else {
+        form.reset({
+          name: '', sku: '', storeId: '', declaredValue: 0, stockAvailable: 0,
+          minStock: 10, category: '', description: '', barcode: '',
+          warehouseLocation: undefined, weight: 0, length: 0, width: 0, height: 0,
+          expirationDate: '', photo: undefined,
+        });
+        setPreviewImage(null);
       }
-    } else {
-      form.reset({
-        name: '',
-        sku: '',
-        storeId: '',
-        declaredValue: 0,
-        stockAvailable: 0,
-        minStock: 10,
-        category: '',
-        description: '',
-        barcode: '',
-        warehouseLocation: undefined,
-        weight: 0,
-        length: 0,
-        width: 0,
-        height: 0,
-        expirationDate: '',
-        photo: undefined,
-      });
-      setPreviewImage(null);
     }
-  }, [article, form, isOpen]);
+  }, [article, isOpen, form]);
 
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -123,27 +99,118 @@ export function ArticleFormDialog({ isOpen, onOpenChange, article, stores }: Art
     if (file) {
       form.setValue('photo', file);
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviewImage(reader.result as string);
-      };
+      reader.onloadend = () => setPreviewImage(reader.result as string);
       reader.readAsDataURL(file);
     }
   };
   
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: FormData) => {
+    if (!firestore || !storage || !user) {
+        toast({ variant: "destructive", title: "Error", description: "La conexión con la base de datos no está disponible." });
+        return;
+    }
     setIsSubmitting(true);
-    console.log("Form Submitted (Demo):", values);
-
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    toast({
-      title: 'Funcionalidad en Desarrollo',
-      description: 'La creación y edición de artículos se conectará a la base de datos en la siguiente fase.',
-    });
     
-    setIsSubmitting(false);
-    onOpenChange(false);
+    try {
+        const storeName = stores.find(s => s.id === values.storeId)?.name || 'N/A';
+        const isNewArticle = !article;
+        
+        // 1. Check for unique SKU if it's a new article or if SKU changed
+        if (isNewArticle || (article && article.sku !== values.sku)) {
+            const skuQuery = query(collection(firestore, 'inventory'), where('storeId', '==', values.storeId), where('sku', '==', values.sku));
+            const skuSnapshot = await getDocs(skuQuery);
+            if (!skuSnapshot.empty) {
+                toast({ variant: "destructive", title: "Error", description: "El SKU ya existe para esta tienda." });
+                setIsSubmitting(false);
+                return;
+            }
+        }
+
+        let photoUrl = article?.photos?.[0] || '';
+        if (values.photo instanceof File) {
+            const itemIdForPath = isNewArticle ? doc(collection(firestore, 'inventory')).id : article.id;
+            const storageRef = ref(storage, `inventory/${itemIdForPath}/photos/${values.photo.name}`);
+            const uploadResult = await uploadBytes(storageRef, values.photo);
+            photoUrl = await getDownloadURL(uploadResult.ref);
+        }
+
+        const itemData = {
+            ...values,
+            storeName,
+            stockReserved: isNewArticle ? 0 : article.stockReserved,
+            stockTotal: (isNewArticle ? values.stockAvailable : article.stockReserved + values.stockAvailable),
+            dimensions: { length: values.length || 0, width: values.width || 0, height: values.height || 0 },
+            photos: photoUrl ? [photoUrl] : [],
+            expirationDate: values.expirationDate ? new Date(values.expirationDate) : null,
+            updatedAt: serverTimestamp(),
+        };
+
+        if (isNewArticle) { // Creating a new article
+            await runTransaction(firestore, async (transaction) => {
+                const newInvRef = doc(collection(firestore, 'inventory'));
+                transaction.set(newInvRef, { ...itemData, createdAt: serverTimestamp(), status: 'active' });
+
+                const movementData: Omit<InventoryMovement, 'id'> = {
+                    itemId: newInvRef.id,
+                    itemName: values.name,
+                    itemSku: values.sku,
+                    storeId: values.storeId,
+                    storeName: storeName,
+                    movementType: 'initial_stock',
+                    referenceId: newInvRef.id,
+                    referenceType: 'item_creation',
+                    quantity: values.stockAvailable,
+                    stockBefore: 0,
+                    stockAfter: values.stockAvailable,
+                    userId: user.uid,
+                    userName: user.name || 'N/A',
+                    createdAt: serverTimestamp(),
+                };
+                const newMovRef = doc(collection(firestore, 'inventoryMovements'));
+                transaction.set(newMovRef, movementData);
+            });
+            toast({ title: "Artículo Creado", description: `${values.name} ha sido agregado al inventario.` });
+        } else { // Editing an existing article
+            await runTransaction(firestore, async (transaction) => {
+                const invRef = doc(firestore, 'inventory', article.id);
+                const stockBefore = article.stockAvailable;
+                const stockAfter = values.stockAvailable;
+                const stockDifference = stockAfter - stockBefore;
+
+                transaction.update(invRef, itemData);
+
+                if (stockDifference !== 0) {
+                     const movementData: Omit<InventoryMovement, 'id'> = {
+                        itemId: article.id,
+                        itemName: values.name,
+                        itemSku: values.sku,
+                        storeId: values.storeId,
+                        storeName: storeName,
+                        movementType: 'adjustment',
+                        referenceId: article.id,
+                        referenceType: 'item_creation',
+                        quantity: stockDifference,
+                        stockBefore: stockBefore,
+                        stockAfter: stockAfter,
+                        userId: user.uid,
+                        userName: user.name || 'N/A',
+                        notes: 'Ajuste manual desde edición de artículo.',
+                        createdAt: serverTimestamp(),
+                    };
+                    const newMovRef = doc(collection(firestore, 'inventoryMovements'));
+                    transaction.set(newMovRef, movementData);
+                }
+            });
+            toast({ title: "Artículo Actualizado", description: "Los cambios han sido guardados." });
+        }
+        
+        onOpenChange(false);
+    } catch (error) {
+        console.error("Error saving article:", error);
+        toast({ variant: "destructive", title: "Error", description: "No se pudo guardar el artículo. Inténtalo de nuevo." });
+    } finally {
+        setIsSubmitting(false);
+    }
   };
 
   return (
@@ -202,7 +269,7 @@ export function ArticleFormDialog({ isOpen, onOpenChange, article, stores }: Art
                     <FormItem><FormLabel>Valor Declarado (RD$)*</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="stockAvailable" render={({ field }) => (
-                    <FormItem><FormLabel>Stock Inicial/Disponible*</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Stock {article ? 'Disponible*' : 'Inicial*'}</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="minStock" render={({ field }) => (
                     <FormItem><FormLabel>Punto de Reorden*</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>

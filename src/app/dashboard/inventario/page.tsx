@@ -1,8 +1,11 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useContext } from 'react';
 import { useAuth } from "@/context/auth-context";
 import React from 'react';
+import { FirebaseContext } from '@/firebase/context';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+
 
 import { Card, CardHeader } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,24 +15,55 @@ import { ArticlesView } from "@/components/inventory/ArticlesView";
 import { MovementsView } from "@/components/inventory/MovementsView";
 import { AdjustmentsView } from "@/components/inventory/AdjustmentsView";
 import type { InventoryItem, Store } from '@/lib/types';
-import { mockInventoryItems, mockStores } from '@/lib/data';
 
 
 export default function InventarioPage() {
   const { user } = useAuth();
+  const { firestore, isInitializing } = useContext(FirebaseContext);
   
-  const [items, setItems] = useState<InventoryItem[]>(mockInventoryItems);
-  const [stores, setStores] = useState<Store[]>(mockStores);
-  const [isLoading, setIsLoading] = useState(false);
+  const [items, setItems] = useState<InventoryItem[]>([]);
+  const [stores, setStores] = useState<Store[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const isClient = user?.role === 'client';
 
-  const clientItems = useMemo(() => {
+  // Fetch Stores
+  useEffect(() => {
+    if (!firestore || isInitializing) return;
+    const storesQuery = query(collection(firestore, 'stores'));
+    const unsubscribe = onSnapshot(storesQuery, (snapshot) => {
+      const storesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Store));
+      setStores(storesData);
+    }, (error) => {
+        console.error("Error fetching stores: ", error);
+    });
+    return () => unsubscribe();
+  }, [firestore, isInitializing]);
+
+  // Fetch Inventory Items
+  useEffect(() => {
+    if (!firestore || isInitializing) {
+        setIsLoading(true);
+        return;
+    };
+    
+    let itemsQuery;
     if (isClient && user?.storeId) {
-      return items.filter(item => item.storeId === user.storeId);
+      itemsQuery = query(collection(firestore, 'inventory'), where('storeId', '==', user.storeId));
+    } else {
+      itemsQuery = query(collection(firestore, 'inventory'));
     }
-    return items;
-  }, [items, isClient, user?.storeId]);
+
+    const unsubscribe = onSnapshot(itemsQuery, (snapshot) => {
+      const itemsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InventoryItem));
+      setItems(itemsData);
+      setIsLoading(false);
+    }, (error) => {
+      console.error("Error fetching inventory items:", error);
+      setIsLoading(false);
+    });
+    return () => unsubscribe();
+  }, [firestore, isInitializing, isClient, user?.storeId]);
 
 
   return (
@@ -45,10 +79,10 @@ export default function InventarioPage() {
       
       {isLoading ? (
         <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
-            {[...Array(6)].map((_, i) => <Card key={i}><CardHeader className="h-24"></CardHeader></Card>)}
+            {[...Array(6)].map((_, i) => <Card key={i}><CardHeader className="h-24 animate-pulse bg-muted/50 rounded-lg"></CardHeader></Card>)}
         </div>
       ) : (
-        <InventoryDashboard items={clientItems} />
+        <InventoryDashboard items={items} />
       )}
       
       <Tabs defaultValue="articles" className="w-full">
@@ -57,21 +91,23 @@ export default function InventarioPage() {
           <TabsTrigger value="movements"><Truck className="mr-2 h-4 w-4" /> Movimientos</TabsTrigger>
           {!isClient && <TabsTrigger value="adjustments"><Settings2 className="mr-2 h-4 w-4" /> Entradas, Salidas y Ajustes</TabsTrigger>}
         </TabsList>
-        {isLoading ? (
+        {isLoading && !isInitializing ? (
             <div className="flex items-center justify-center p-16">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
         ) : (
             <>
                 <TabsContent value="articles" className="mt-4">
-                <ArticlesView items={clientItems} stores={stores} />
+                <ArticlesView items={items} stores={stores} />
                 </TabsContent>
                 <TabsContent value="movements" className="mt-4">
-                <MovementsView />
+                <MovementsView stores={stores} />
                 </TabsContent>
-                <TabsContent value="adjustments" className="mt-4">
-                <AdjustmentsView />
-                </TabsContent>
+                {!isClient && (
+                    <TabsContent value="adjustments" className="mt-4">
+                    <AdjustmentsView stores={stores} allItems={items} />
+                    </TabsContent>
+                )}
             </>
         )}
       </Tabs>
