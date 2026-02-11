@@ -63,6 +63,7 @@
         "stockReserved": { "type": "number" },
         "stockTotal": { "type": "number" },
         "minStock": { "type": "number" },
+        "idealStock": { "type": "number" },
         "warehouseLocation": { "type": "string" },
         "weight": { "type": "number" },
         "dimensions": {
@@ -75,8 +76,29 @@
         },
         "expirationDate": { "type": "string", "format": "date-time" },
         "status": { "type": "string", "enum": ["active", "inactive", "depleted"] },
+        "dropshipping": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "minPrice": { "type": "number" },
+            "suggestedPrice": { "type": "number" },
+            "fee": { "type": "number" },
+            "feeType": { "type": "string", "enum": ["fixed", "percentage"] },
+            "description": { "type": "string" },
+            "photos": { "type": "array", "items": { "type": "string", "format": "uri" } },
+            "category": { "type": "string" }
+          }
+        },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "InventoryItemPrivate": {
+      "title": "Inventory Item Private Data",
+      "description": "Sensitive data for an inventory item, only accessible by admins.",
+      "type": "object",
+      "properties": {
+        "cost": { "type": "number" }
       }
     },
     "InventoryMovement": {
@@ -206,6 +228,19 @@
         },
         "isDraft": { "type": "boolean" },
         "draftTrackingId": { "type": "string" },
+        "isDropshipping": { "type": "boolean" },
+        "dropshipping": {
+          "type": "object",
+          "properties": {
+            "originalCost": { "type": "number" },
+            "salePrice": { "type": "number" },
+            "minPrice": { "type": "number" },
+            "fee": { "type": "number" },
+            "feeType": { "type": "string" },
+            "profit": { "type": "number" },
+            "storeProfit": { "type": "number" }
+          }
+        },
         "createdBy": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
@@ -348,6 +383,7 @@
   "firestore": {
     "/stores/{storeId}": { "schema": { "$ref": "#/entities/Store" } },
     "/inventory/{itemId}": { "schema": { "$ref": "#/entities/InventoryItem" } },
+    "/inventory/{itemId}/private/pricing": { "schema": { "$ref": "#/entities/InventoryItemPrivate" } },
     "/inventoryMovements/{movementId}": { "schema": { "$ref": "#/entities/InventoryMovement" } },
     "/inventoryTransactions/{transactionId}": { "schema": { "$ref": "#/entities/InventoryTransaction" } },
     "/orders/{orderId}": { "schema": { "$ref": "#/entities/Order" } },

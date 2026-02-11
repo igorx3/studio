@@ -2,86 +2,109 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Default deny all access unless a rule allows it
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isRole(role) {
+      return isAuth() && getUserRole() == role;
+    }
+    
+    function isOneOfRoles(roles) {
+      return isAuth() && getUserRole() in roles;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    // Default deny all
     match /{document=**} {
       allow read, write: if false;
     }
 
-    // Allow authenticated users to read/write their own profile
+    // USER PROFILES
     match /users/{userId} {
-      allow read, write: if request.auth.uid == userId;
+      allow read, write: if isAuth() && isOwner(userId);
     }
 
-    // Allow authenticated users to read stores
+    // STORES
     match /stores/{storeId} {
-      allow read: if request.auth != null;
-      // Write access only for admins (implement role check)
-      allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      allow read: if isAuth();
+      allow write: if isOneOfRoles(['admin', 'operations']);
     }
 
-    // Counter can be updated by any authenticated user (for creating orders)
+    // TRACKING COUNTER
     match /trackingCounter/current {
-        allow read, write: if request.auth != null;
+        allow read, write: if isAuth();
     }
 
     // INVENTORY
     match /inventory/{itemId} {
-      // Allow reading items
-      allow read: if request.auth != null;
-      // Allow creating items for any authenticated user
-      allow create: if request.auth != null;
-      // Allow updating items only for admin/operations, or for a client for their own store
-      allow update: if request.auth != null && 
-                      (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'operations'] || 
-                      resource.data.storeId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.storeId);
-      // Disallow deletion for now, use a status field
+      allow read: if isAuth();
+      allow create, update: if isOneOfRoles(['admin', 'operations']);
+      // Allow client to update only their own items, and prevent them from editing dropshipping fields
+      allow update: if isAuth() && 
+                    resource.data.storeId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.storeId &&
+                    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'description', 'photos']); // Example of limited update
       allow delete: if false;
+    }
+
+    // INVENTORY PRIVATE DATA (COSTS) - ADMIN ONLY
+    match /inventory/{itemId}/private/{pricingDoc} {
+       allow read, write: if isOneOfRoles(['admin']);
     }
 
     // ORDERS
     match /orders/{orderId} {
-        // A client can read their own orders. Admin/ops can read all.
-        allow read: if request.auth != null && 
-                    (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'operations', 'warehouse', 'finance', 'courier'] || 
+        // A client can read their own orders. Admin/ops/warehouse/finance/courier can read all.
+        allow read: if isAuth() && 
+                    (isOneOfRoles(['admin', 'operations', 'warehouse', 'finance', 'courier']) || 
                     resource.data.storeId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.storeId);
         // Any auth user can create an order (e.g. a client)
-        allow create: if request.auth != null;
+        allow create: if isAuth();
         // Only admin/ops can update orders broadly. Clients can only do specific actions.
-        allow update: if request.auth != null &&
-                      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'operations'];
+        allow update: if isOneOfRoles(['admin', 'operations']);
     }
     
-    // CLIENTS (Destinatarios)
+    // CLIENTS (Recipients)
     match /clients/{clientId} {
-      allow read, write: if request.auth != null;
+      allow read, write: if isAuth();
     }
 
     // IMMUTABLE LOGS
     match /inventoryMovements/{movementId} {
-      allow read, create: if request.auth != null;
+      allow create: if isAuth();
+      allow read: if isAuth() && (isOneOfRoles(['admin', 'operations', 'warehouse', 'finance']) || resource.data.storeId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.storeId);
       allow update, delete: if false;
     }
+    match /inventoryTransactions/{transactionId} {
+        allow create: if isAuth();
+        allow read: if isAuth() && (isOneOfRoles(['admin', 'operations', 'warehouse', 'finance']) || resource.data.storeId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.storeId);
+        allow update, delete: if false;
+    }
+
+    // Order related logs
     match /orderStatusHistory/{historyId} {
-      allow read, create: if request.auth != null;
+      allow read, create: if isAuth();
       allow update, delete: if false;
     }
     match /orderLocationHistory/{historyId} {
-      allow read, create: if request.auth != null;
+      allow read, create: if isAuth();
       allow update, delete: if false;
     }
     match /orderComments/{commentId} {
-      allow read, create: if request.auth != null;
+      allow read, create: if isAuth();
       allow update, delete: if false;
     }
      match /orderNovelties/{noveltyId} {
-      allow read, create: if request.auth != null;
-      allow update: if request.auth != null; // Allow updates for resolution
+      allow read, create: if isAuth();
+      allow update: if isAuth(); // Allow updates for resolution
       allow delete: if false;
-    }
-    
-    match /inventoryTransactions/{transactionId} {
-        allow read, create: if request.auth != null;
-        allow update, delete: if false;
     }
   }
 }

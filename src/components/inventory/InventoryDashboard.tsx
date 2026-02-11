@@ -2,7 +2,7 @@
 import React, { useMemo } from 'react';
 import type { InventoryItem } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, Archive, AlertTriangle, Clock, Sigma } from "lucide-react";
+import { Package, Archive, AlertTriangle, Clock, Sigma, Ban } from "lucide-react";
 import { Timestamp } from 'firebase/firestore';
 
 interface InventoryDashboardProps {
@@ -18,15 +18,18 @@ export function InventoryDashboard({ items }: InventoryDashboardProps) {
             totalSkus: 0,
             totalUnits: 0,
             lowStockItems: 0,
+            criticalStockItems: 0,
             outOfStockItems: 0,
             expiringSoonItems: 0,
         };
     }
 
-    const totalValue = items.reduce((sum, item) => sum + (item.declaredValue * (item.stockAvailable + item.stockReserved)), 0);
+    const totalValue = items.reduce((sum, item) => sum + (item.declaredValue * item.stockTotal), 0);
     const totalSkus = items.length;
-    const totalUnits = items.reduce((sum, item) => sum + (item.stockAvailable + item.stockReserved), 0);
-    const lowStockItems = items.filter(item => item.stockAvailable <= item.minStock && item.stockAvailable > 0).length;
+    const totalUnits = items.reduce((sum, item) => sum + item.stockTotal, 0);
+    
+    const lowStockItems = items.filter(item => item.stockAvailable < item.idealStock && item.stockAvailable > item.minStock).length;
+    const criticalStockItems = items.filter(item => item.stockAvailable <= item.minStock && item.stockAvailable > 0).length;
     const outOfStockItems = items.filter(item => item.stockAvailable === 0).length;
     
     const thirtyDaysFromNow = new Date();
@@ -34,9 +37,7 @@ export function InventoryDashboard({ items }: InventoryDashboardProps) {
 
     const expiringSoonItems = items.filter(item => {
         if (!item.expirationDate) return false;
-        
         let expiration;
-        // Firestore Timestamps need to be converted to JS Dates
         if (item.expirationDate instanceof Timestamp) {
             expiration = item.expirationDate.toDate();
         } else if (typeof item.expirationDate === 'string') {
@@ -52,6 +53,7 @@ export function InventoryDashboard({ items }: InventoryDashboardProps) {
       totalSkus,
       totalUnits,
       lowStockItems,
+      criticalStockItems,
       outOfStockItems,
       expiringSoonItems,
     };
@@ -61,9 +63,9 @@ export function InventoryDashboard({ items }: InventoryDashboardProps) {
     { title: "Valor Total del Inventario", value: `$${kpis.totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, icon: Sigma },
     { title: "Total de Artículos (SKUs)", value: kpis.totalSkus.toLocaleString(), icon: Package },
     { title: "Total de Unidades", value: kpis.totalUnits.toLocaleString(), icon: Archive },
-    { title: "Artículos con Stock Bajo", value: kpis.lowStockItems.toLocaleString(), icon: AlertTriangle, color: "text-primary" },
-    { title: "Artículos Agotados", value: kpis.outOfStockItems.toLocaleString(), icon: AlertTriangle, color: "text-destructive" },
-    { title: "Próximos a Vencer", value: kpis.expiringSoonItems.toLocaleString(), icon: Clock, color: "text-orange-500" },
+    { title: "Artículos con Stock Bajo", value: kpis.lowStockItems.toLocaleString(), icon: AlertTriangle, color: "text-yellow-500" },
+    { title: "Artículos con Stock Crítico", value: kpis.criticalStockItems.toLocaleString(), icon: AlertTriangle, color: "text-orange-500" },
+    { title: "Artículos Agotados", value: kpis.outOfStockItems.toLocaleString(), icon: Ban, color: "text-red-500" },
   ];
 
   return (

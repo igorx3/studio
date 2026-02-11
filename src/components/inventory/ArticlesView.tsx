@@ -9,7 +9,8 @@ import { Search, PlusCircle, LayoutGrid, List } from 'lucide-react';
 import Image from 'next/image';
 import { useAuth } from '@/context/auth-context';
 import { ArticleFormDialog } from './ArticleFormDialog';
-import { Card, CardContent } from '../ui/card';
+import { Card } from '../ui/card';
+import { cn } from '@/lib/utils';
 
 interface ArticlesViewProps {
     items: InventoryItem[];
@@ -36,7 +37,6 @@ export function ArticlesView({ items, stores }: ArticlesViewProps) {
 
     const filteredItems = useMemo(() => {
         if (!searchTerm) return items;
-
         return items.filter(item => 
             item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             item.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -44,16 +44,11 @@ export function ArticlesView({ items, stores }: ArticlesViewProps) {
         );
     }, [searchTerm, items]);
 
-    const getStatusVariant = (item: InventoryItem): 'destructive' | 'default' | 'secondary' => {
-        if (item.stockAvailable <= 0) return 'destructive';
-        if (item.stockAvailable <= item.minStock) return 'default'; // This will be yellow/primary
-        return 'secondary';
-    }
-
-    const getStatusLabel = (item: InventoryItem) => {
-        if (item.stockAvailable <= 0) return 'Agotado';
-        if (item.stockAvailable <= item.minStock) return 'Stock Bajo';
-        return item.status;
+    const getStatus = (item: InventoryItem): { label: string; badgeVariant: 'destructive' | 'default' | 'secondary' | 'outline'; textClass: string; } => {
+        if (item.stockAvailable <= 0) return { label: 'Agotado', badgeVariant: 'destructive', textClass: 'text-red-500' };
+        if (item.stockAvailable <= item.minStock) return { label: 'Stock Crítico', badgeVariant: 'destructive', textClass: 'text-red-500' };
+        if (item.stockAvailable < item.idealStock) return { label: 'Stock Bajo', badgeVariant: 'default', textClass: 'text-yellow-500' };
+        return { label: 'Activo', badgeVariant: 'secondary', textClass: 'text-green-500' };
     }
 
     return (
@@ -114,7 +109,9 @@ export function ArticlesView({ items, stores }: ArticlesViewProps) {
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                filteredItems.map(item => (
+                                filteredItems.map(item => {
+                                    const status = getStatus(item);
+                                    return (
                                     <TableRow key={item.id} onClick={() => handleEditArticle(item)} className="cursor-pointer">
                                         <TableCell>
                                              <Image src={item.photos?.[0] || 'https://placehold.co/40x40/1A1A1A/FFFFFF?text=?'} alt={item.name} width={40} height={40} className="rounded-md object-cover" data-ai-hint="product image"/>
@@ -122,15 +119,16 @@ export function ArticlesView({ items, stores }: ArticlesViewProps) {
                                         <TableCell className="font-medium">{item.name}</TableCell>
                                         <TableCell>{item.sku}</TableCell>
                                         {user?.role !== 'client' && <TableCell>{item.storeName}</TableCell>}
-                                        <TableCell className="font-bold">{item.stockAvailable}</TableCell>
+                                        <TableCell className={cn("font-bold", status.textClass)}>{item.stockAvailable}</TableCell>
                                         <TableCell>{item.stockReserved}</TableCell>
                                         <TableCell>${item.declaredValue.toLocaleString()}</TableCell>
                                         {user?.role !== 'client' && <TableCell>{item.warehouseLocation}</TableCell>}
                                         <TableCell>
-                                            <Badge variant={getStatusVariant(item)}>{getStatusLabel(item)}</Badge>
+                                            <Badge variant={status.badgeVariant}>{status.label}</Badge>
                                         </TableCell>
                                     </TableRow>
-                                ))
+                                    )
+                                })
                             )}
                         </TableBody>
                     </Table>

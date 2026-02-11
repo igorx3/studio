@@ -77,6 +77,16 @@ export interface OrderFinancials {
     netToLiquidate: number;
 }
 
+export interface OrderDropshippingInfo {
+  originalCost: number;
+  salePrice: number;
+  minPrice: number;
+  fee: number;
+  feeType: 'fixed' | 'percentage';
+  profit: number;
+  storeProfit: number;
+}
+
 export interface Order {
   id: string;
   trackingId: string;
@@ -123,6 +133,9 @@ export interface Order {
   createdBy: string; // userId
   createdAt: any; // serverTimestamp
   updatedAt: any; // serverTimestamp
+
+  isDropshipping?: boolean;
+  dropshipping?: OrderDropshippingInfo;
 
   // Legacy fields for mock data compatibility
   externalOrderReference?: string;
@@ -195,6 +208,21 @@ export interface Store {
 
 export type InventoryItemStatus = 'active' | 'inactive' | 'depleted';
 
+export interface DropshippingInfo {
+  enabled: boolean;
+  minPrice: number;
+  suggestedPrice: number;
+  fee: number;
+  feeType: 'fixed' | 'percentage';
+  description: string;
+  photos: string[];
+  category: string;
+}
+
+export interface InventoryItemPrivate {
+  cost: number;
+}
+
 export interface InventoryItem {
   id: string;
   name: string;
@@ -209,7 +237,8 @@ export interface InventoryItem {
   stockAvailable: number;
   stockReserved: number;
   stockTotal: number;
-  minStock: number; // reorder point
+  minStock: number;
+  idealStock: number;
   warehouseLocation: SubLocation;
   weight: number; // in grams
   dimensions: {
@@ -219,6 +248,7 @@ export interface InventoryItem {
   };
   expirationDate?: any; // timestamp
   status: InventoryItemStatus;
+  dropshipping?: DropshippingInfo;
   createdAt: any; // serverTimestamp
   updatedAt: any; // serverTimestamp
 }

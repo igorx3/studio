@@ -43,6 +43,7 @@ import {
   LayoutGrid,
   Sun,
   Moon,
+  ShoppingBag,
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
@@ -50,6 +51,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 const operationsNavItems = [
   { href: '/dashboard', label: 'Tablero', icon: LayoutDashboard, roles: ['admin', 'operations', 'finance', 'client', 'courier', 'warehouse'] },
   { href: '/dashboard/pedidos', label: 'Pedidos', icon: Package, roles: ['admin', 'operations', 'client'] },
+  { href: '/dashboard/dropshipping', label: 'Catálogo Dropshipping', icon: ShoppingBag, roles: ['client'] },
   { href: '/dashboard/asignados', label: 'Asignados', icon: ClipboardCheck, roles: ['admin', 'operations'] },
   { href: '/dashboard/pistoleo-masivo', label: 'Pistoleo Masivo', icon: ScanLine, roles: ['admin', 'warehouse'] },
   { href: '/dashboard/ubicacion', label: 'Ubicación', icon: MapPin, roles: ['admin', 'operations'] },
@@ -63,6 +65,7 @@ const adminNavItems = [
     { href: '/dashboard/destinatarios', label: 'Destinatarios', icon: Users, roles: ['admin', 'operations'] },
     { href: '/dashboard/suplidores', label: 'Suplidores', icon: Building, roles: ['admin'] },
     { href: '/dashboard/inventario', label: 'Inventario', icon: LayoutGrid, roles: ['admin', 'operations', 'client'] },
+    { href: '/dashboard/dropshipping-management', label: 'Gestión Dropshipping', icon: Briefcase, roles: ['admin', 'operations'] },
     { href: '/dashboard/base-de-datos', label: 'Base de Datos', icon: Database, roles: ['admin'] },
     { href: '/dashboard/ingresos', label: 'Ingresos', icon: TrendingUp, roles: ['admin', 'finance'] },
     { href: '/dashboard/gastos', label: 'Gastos', icon: TrendingDown, roles: ['admin', 'finance'] },
