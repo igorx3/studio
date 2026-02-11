@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -14,13 +14,14 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, UploadCloud, ChevronDown, Droplets } from 'lucide-react';
 import type { InventoryItem, Store, InventoryMovement, InventoryItemPrivate, PackageLocation, WarehouseSubLocation, ArticleCategory } from '@/lib/types';
 import { useAuth } from '@/context/auth-context';
-import { useFirestore, useFirebaseApp, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, addDoc, serverTimestamp, getDocs, query, where, runTransaction, doc, getDoc, setDoc, onSnapshot, updateDoc, orderBy, Timestamp } from 'firebase/firestore';
+import { useFirestore, useFirebaseApp, useCollection, useMemoFirebase, useUser } from '@/firebase';
+import { collection, addDoc, serverTimestamp, getDocs, query, where, runTransaction, doc, getDoc, setDoc, updateDoc, orderBy, Timestamp } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import Image from 'next/image';
 import { Switch } from '../ui/switch';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
 import { cn } from '@/lib/utils';
+import { useMemo } from 'react';
 
 
 const packageLocations: PackageLocation[] = ['alistamiento', 'despacho', 'recepcion', 'en_ruta'];
@@ -77,6 +78,7 @@ export function ArticleFormDialog({ isOpen, onOpenChange, article, stores }: { i
   const { user } = useAuth();
   const firestore = useFirestore();
   const firebaseApp = useFirebaseApp();
+  const { isUserLoading: isAuthLoading } = useUser();
   const storage = getStorage(firebaseApp);
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -86,9 +88,9 @@ export function ArticleFormDialog({ isOpen, onOpenChange, article, stores }: { i
   const [isDropshippingOpen, setIsDropshippingOpen] = useState(false);
 
   const categoriesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (isAuthLoading || !firestore) return null;
     return query(collection(firestore, "articleCategories"), where("status", "==", "active"), orderBy("name"));
-  }, [firestore]);
+  }, [firestore, isAuthLoading]);
   const { data: categoriesData } = useCollection<ArticleCategory>(categoriesQuery);
   const categories = useMemo(() => categoriesData || [], [categoriesData]);
 
@@ -101,7 +103,7 @@ export function ArticleFormDialog({ isOpen, onOpenChange, article, stores }: { i
 
   useEffect(() => {
     const fetchPrivateData = async () => {
-        if (article && isAdmin && firestore) {
+        if (article && isAdmin && firestore && !isAuthLoading) {
             const privateRef = doc(firestore, 'inventory', article.id, 'private', 'pricing');
             const privateSnap = await getDoc(privateRef);
             if (privateSnap.exists()) {
@@ -160,7 +162,7 @@ export function ArticleFormDialog({ isOpen, onOpenChange, article, stores }: { i
         setIsDropshippingOpen(false);
       }
     }
-  }, [article, isOpen, form, isAdmin, firestore]);
+  }, [article, isOpen, form, isAdmin, firestore, isAuthLoading]);
 
   useEffect(() => {
     if (privateData) {

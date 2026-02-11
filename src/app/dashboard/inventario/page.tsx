@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { useAuth } from "@/context/auth-context";
 import React from 'react';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 
 
@@ -21,21 +21,22 @@ import type { InventoryItem, Store } from '@/lib/types';
 export default function InventarioPage() {
   const { user } = useAuth();
   const firestore = useFirestore();
+  const { isUserLoading: isAuthLoading } = useUser();
   
   const isAdmin = user?.role === 'admin' || user?.role === 'operations';
 
   const storesQuery = useMemoFirebase(() => {
-      if (!firestore) return null;
+      if (isAuthLoading || !firestore) return null;
       return query(collection(firestore, 'stores'));
-  }, [firestore]);
+  }, [firestore, isAuthLoading]);
 
   const itemsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (isAuthLoading || !firestore) return null;
     if (user?.role === 'client' && user.storeId) {
       return query(collection(firestore, 'inventory'), where('storeId', '==', user.storeId));
     }
     return query(collection(firestore, 'inventory'));
-  }, [firestore, user?.role, user?.storeId]);
+  }, [firestore, user?.role, user?.storeId, isAuthLoading]);
 
   const { data: storesData, isLoading: isLoadingStores } = useCollection<Store>(storesQuery);
   const { data: itemsData, isLoading: isLoadingItems } = useCollection<InventoryItem>(itemsQuery);
@@ -43,7 +44,7 @@ export default function InventarioPage() {
   const stores = useMemo(() => storesData || [], [storesData]);
   const items = useMemo(() => itemsData || [], [itemsData]);
   
-  const isLoading = isLoadingStores || isLoadingItems;
+  const isLoading = isAuthLoading || isLoadingStores || isLoadingItems;
 
   return (
     <div className="space-y-6">

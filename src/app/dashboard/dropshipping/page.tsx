@@ -1,7 +1,7 @@
 'use client';
-import React, { useState, useEffect, useContext, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/context/auth-context';
-import { FirebaseContext } from '@/firebase/context';
+import { useFirestore, useUser } from '@/firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import type { InventoryItem } from '@/lib/types';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -79,13 +79,14 @@ const ProductCardSkeleton = () => (
 
 export default function DropshippingCatalogPage() {
     const { user } = useAuth();
-    const { firestore } = useContext(FirebaseContext);
+    const firestore = useFirestore();
+    const { isUserLoading: isAuthLoading } = useUser();
     const [items, setItems] = useState<InventoryItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
-        if (!firestore) return;
+        if (isAuthLoading || !firestore) return;
         setIsLoading(true);
         const itemsQuery = query(
             collection(firestore, 'inventory'), 
@@ -103,7 +104,7 @@ export default function DropshippingCatalogPage() {
         });
 
         return () => unsubscribe();
-    }, [firestore]);
+    }, [firestore, isAuthLoading]);
     
     const filteredItems = useMemo(() => {
         if (!searchTerm) return items;
@@ -143,7 +144,7 @@ export default function DropshippingCatalogPage() {
       </div>
       
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-        {isLoading ? (
+        {isLoading || isAuthLoading ? (
             Array.from({ length: 10 }).map((_, i) => <ProductCardSkeleton key={i} />)
         ) : filteredItems.length > 0 ? (
             filteredItems.map(item => <ProductCard key={item.id} item={item} />)

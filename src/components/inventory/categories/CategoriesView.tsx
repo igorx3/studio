@@ -1,7 +1,7 @@
 'use client';
 import { useState, useMemo } from 'react';
 import type { ArticleCategory } from '@/lib/types';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { collection, query, orderBy } from 'firebase/firestore';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,14 +14,15 @@ import { format } from 'date-fns';
 
 export function CategoriesView() {
     const firestore = useFirestore();
+    const { isUserLoading: isAuthLoading } = useUser();
     const [searchTerm, setSearchTerm] = useState('');
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState<ArticleCategory | null>(null);
 
     const categoriesQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
+        if (isAuthLoading || !firestore) return null;
         return query(collection(firestore, "articleCategories"), orderBy("name"));
-    }, [firestore]);
+    }, [firestore, isAuthLoading]);
     const { data: categoriesData, isLoading } = useCollection<ArticleCategory>(categoriesQuery);
     const categories = useMemo(() => categoriesData || [], [categoriesData]);
 
@@ -79,7 +80,7 @@ export function CategoriesView() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {isLoading ? (
+                        {isLoading || isAuthLoading ? (
                             <TableRow><TableCell colSpan={4} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>
                         ) : filteredItems.length === 0 ? (
                             <TableRow>

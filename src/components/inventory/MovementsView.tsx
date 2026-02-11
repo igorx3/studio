@@ -12,7 +12,7 @@ import { Calendar as CalendarIcon, Loader2, Search } from "lucide-react";
 import { format } from "date-fns";
 import { DateRange } from "react-day-picker";
 import { useAuth } from '@/context/auth-context';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useUser } from '@/firebase';
 import { collection, query, where, orderBy, limit, getDocs, startAfter, endBefore, limitToLast, Timestamp } from 'firebase/firestore';
 import type { InventoryMovement, Store } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -34,6 +34,7 @@ const movementTypeColors: { [key: string]: string } = {
 export function MovementsView({ stores }: { stores: Store[] }) {
     const { user } = useAuth();
     const firestore = useFirestore();
+    const { isUserLoading: isAuthLoading } = useUser();
 
     const [movements, setMovements] = useState<InventoryMovement[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -50,7 +51,7 @@ export function MovementsView({ stores }: { stores: Store[] }) {
     const [isLastPage, setIsLastPage] = useState(false);
 
     const fetchMovements = async (direction: 'next' | 'prev' | 'first' = 'first') => {
-        if (!firestore) return;
+        if (isAuthLoading || !firestore) return;
         setIsLoading(true);
 
         let q = query(
@@ -100,10 +101,10 @@ export function MovementsView({ stores }: { stores: Store[] }) {
     };
     
     useEffect(() => {
-        if (firestore) {
+        if (!isAuthLoading && firestore) {
             handleFilter();
         }
-    }, [firestore, storeFilter, dateRange, user]);
+    }, [firestore, storeFilter, dateRange, user, isAuthLoading]);
     
     const handleFilter = () => {
         setCurrentPage(1);
@@ -218,7 +219,7 @@ export function MovementsView({ stores }: { stores: Store[] }) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading ? (
+              {isLoading || isAuthLoading ? (
                 <TableRow><TableCell colSpan={9} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>
               ) : filteredMovements.length > 0 ? (
                 filteredMovements.map((mov) => (
