@@ -13,6 +13,7 @@ import { Card } from '../ui/card';
 
 interface OrdersListProps {
   orders: Order[];
+  onOrderClick: (order: Order) => void;
 }
 
 const statusVariant: { [key in OrderStatus]?: "default" | "secondary" | "outline" | "destructive" } = {
@@ -62,7 +63,7 @@ function sortByCreatedAtDesc(orders: Order[]): Order[] {
 
 const PAGE_SIZE = 15;
 
-export function OrdersList({ orders }: OrdersListProps) {
+export function OrdersList({ orders, onOrderClick }: OrdersListProps) {
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     
@@ -74,7 +75,8 @@ export function OrdersList({ orders }: OrdersListProps) {
         return sortedOrders.filter(order =>
             (order.externalOrderReference?.toLowerCase().includes(lowercasedFilter)) ||
             (order.client.toLowerCase().includes(lowercasedFilter)) ||
-            (order.recipientName.toLowerCase().includes(lowercasedFilter))
+            (order.recipientName.toLowerCase().includes(lowercasedFilter)) ||
+            (order.recipientPhone?.toLowerCase().includes(lowercasedFilter))
         );
     }, [sortedOrders, searchTerm]);
 
@@ -118,6 +120,7 @@ export function OrdersList({ orders }: OrdersListProps) {
                         <TableHead>Fecha</TableHead>
                         <TableHead>Cliente</TableHead>
                         <TableHead>Destinatario</TableHead>
+                        <TableHead>Teléfono</TableHead>
                         <TableHead>Estado</TableHead>
                         <TableHead>Mensajero</TableHead>
                         <TableHead className="text-right">COD</TableHead>
@@ -127,18 +130,19 @@ export function OrdersList({ orders }: OrdersListProps) {
                 <TableBody>
                     {paginatedOrders.length > 0 ? (
                         paginatedOrders.map(order => (
-                            <TableRow key={order.id}>
-                                <TableCell><Checkbox /></TableCell>
+                            <TableRow key={order.id} onClick={() => onOrderClick(order)} className="cursor-pointer">
+                                <TableCell onClick={(e) => e.stopPropagation()}><Checkbox /></TableCell>
                                 <TableCell className="font-medium">{order.externalOrderReference || order.id}</TableCell>
                                 <TableCell>{new Date(order.createdAt).toLocaleDateString()}</TableCell>
                                 <TableCell>{order.client}</TableCell>
                                 <TableCell>{order.recipientName}</TableCell>
+                                <TableCell>{order.recipientPhone}</TableCell>
                                 <TableCell>
                                     <Badge variant={statusVariant[order.status] || 'secondary'}>{order.status}</Badge>
                                 </TableCell>
                                 <TableCell>{order.assignedCourierName || 'N/A'}</TableCell>
                                 <TableCell className="text-right font-medium">${order.cashOnDeliveryAmount?.toLocaleString() || '0.00'}</TableCell>
-                                <TableCell className="text-right">
+                                <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
                                         <Button variant="ghost" size="icon">
@@ -146,7 +150,7 @@ export function OrdersList({ orders }: OrdersListProps) {
                                         </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent>
-                                        <DropdownMenuItem>Ver Detalles</DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => onOrderClick(order)}>Ver Detalles</DropdownMenuItem>
                                         <DropdownMenuItem>Cambiar Estado</DropdownMenuItem>
                                         <DropdownMenuItem>Imprimir Etiqueta</DropdownMenuItem>
                                         </DropdownMenuContent>
@@ -156,7 +160,7 @@ export function OrdersList({ orders }: OrdersListProps) {
                         ))
                     ) : (
                         <TableRow>
-                            <TableCell colSpan={9} className="text-center h-24 text-muted-foreground">
+                            <TableCell colSpan={10} className="text-center h-24 text-muted-foreground">
                                 No se encontraron pedidos.
                             </TableCell>
                         </TableRow>

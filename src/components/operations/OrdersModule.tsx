@@ -8,10 +8,11 @@ import { mockOrders } from "@/lib/data";
 import type { Order, OrderStatus } from "@/lib/types";
 import { OrdersList } from './OrdersList';
 import { OrdersKanban } from './OrdersKanban';
+import OrderDetailDialog from './OrderDetailDialog';
 
-const submenuItems: { label: string; statusFilter: (OrderStatus | OrderStatus[]) | null }[] = [
+const submenuItems: { label: string; statusFilter: OrderStatus | OrderStatus[] | null }[] = [
     { label: 'Nuevos', statusFilter: 'Generado' },
-    { label: 'Confirmados', statusFilter: ['Confirmado', 'Confirmado para la tarde'] },
+    { label: 'Confirmados', statusFilter: 'Confirmado' },
     { label: 'Novedad', statusFilter: 'Novedad' },
     { label: 'Pendientes', statusFilter: ['Pendiente Respuesta', 'Llamar'] },
     { label: 'Todos', statusFilter: null },
@@ -20,6 +21,7 @@ const submenuItems: { label: string; statusFilter: (OrderStatus | OrderStatus[])
 export function OrdersModule() {
   const [view, setView] = useState<'list' | 'kanban'>('list');
   const [activeSubMenu, setActiveSubMenu] = useState<string>('Todos');
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   
   const orders = useMemo(() => mockOrders, []);
 
@@ -84,12 +86,21 @@ export function OrdersModule() {
             </div>
 
             <TabsContent value="list" className="mt-4">
-                <OrdersList orders={filteredOrders} />
+                <OrdersList orders={filteredOrders} onOrderClick={setSelectedOrder} />
             </TabsContent>
             <TabsContent value="kanban" className="mt-4">
-                <OrdersKanban orders={filteredOrders} />
+                <OrdersKanban orders={filteredOrders} onOrderClick={setSelectedOrder} />
             </TabsContent>
         </Tabs>
+
+        <OrderDetailDialog 
+            order={selectedOrder}
+            onOpenChange={(open) => {
+                if (!open) {
+                    setSelectedOrder(null);
+                }
+            }}
+        />
     </div>
   );
 }

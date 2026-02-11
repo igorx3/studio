@@ -8,6 +8,7 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
 interface OrdersKanbanProps {
   orders: Order[];
+  onOrderClick: (order: Order) => void;
 }
 
 type KanbanColumn = {
@@ -18,18 +19,18 @@ type KanbanColumn = {
 
 const columns: KanbanColumn[] = [
     { id: 'Generado', label: 'Creados', statuses: ['Generado'] },
-    { id: 'ENVIADO', label: 'En Almacén', statuses: ['ENVIADO', 'En almacén'] },
+    { id: 'ENVIADO', label: 'En Almacén', statuses: ['ENVIADO'] },
     { id: 'Confirmado', label: 'Listos', statuses: ['Confirmado', 'Confirmado para la tarde', 'Coordinado', 'CONFIRMADO SIN STOCK'] },
-    { id: 'En Ruta', label: 'En Ruta', statuses: ['En Ruta', 'En tránsito'] },
+    { id: 'En Ruta', label: 'En Ruta', statuses: ['En Ruta'] },
     { id: 'Entregado', label: 'Entregados', statuses: ['Entregado', 'ENTREGADO'] },
     { id: 'Novedad', label: 'Fallidos', statuses: ['Novedad', 'NOVEDAD 2', 'Pendiente Respuesta', 'Sin respuestas', 'NO RECOGIDO', 'Llamar', 'Reprogramado'] },
     { id: 'Devolución', label: 'Devueltos', statuses: ['Devolución', 'DEVUELTO A TIENDA', 'Devolucion'] },
     { id: 'Cancelado', label: 'Cancelados', statuses: ['Cancelado', 'Anulado', 'CANCELADO'] },
 ];
 
-const OrderCard = ({ order }: { order: Order }) => {
+const OrderCard = ({ order, onClick }: { order: Order, onClick: () => void }) => {
   return (
-    <Card className="mb-2 cursor-pointer">
+    <Card className="mb-2 cursor-pointer hover:bg-muted/80" onClick={onClick}>
       <CardContent className="p-3">
         <div className="flex justify-between items-start">
             <p className="font-semibold text-sm">{order.externalOrderReference || order.id}</p>
@@ -47,7 +48,7 @@ const OrderCard = ({ order }: { order: Order }) => {
   );
 };
 
-export function OrdersKanban({ orders }: OrdersKanbanProps) {
+export function OrdersKanban({ orders, onOrderClick }: OrdersKanbanProps) {
   const getColumnOrders = (statuses: OrderStatus[]) => {
     return orders.filter(order => statuses.includes(order.status));
   };
@@ -68,7 +69,7 @@ export function OrdersKanban({ orders }: OrdersKanbanProps) {
                     </CardHeader>
                     <CardContent className="p-2 h-[calc(100vh-20rem)] overflow-y-auto">
                         {columnOrders.length > 0 ? (
-                            columnOrders.map(order => <OrderCard key={order.id} order={order} />)
+                            columnOrders.map(order => <OrderCard key={order.id} order={order} onClick={() => onOrderClick(order)} />)
                         ) : (
                             <p className="text-xs text-center text-muted-foreground p-4">No hay pedidos en este estado.</p>
                         )}

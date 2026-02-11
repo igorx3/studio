@@ -1,4 +1,4 @@
-import type { User, Order, UserRole } from './types';
+import type { User, Order, UserRole, OrderComment, OrderEvent } from './types';
 
 export const mockUsers: Record<UserRole, User> = {
   admin: {
@@ -8,36 +8,79 @@ export const mockUsers: Record<UserRole, User> = {
     avatarUrl: 'https://picsum.photos/seed/admin/100/100'
   },
   operations: {
-    name: 'Operations User',
+    name: 'Ana de Operaciones',
     email: 'ops@khlothia.pack',
     role: 'operations',
     avatarUrl: 'https://picsum.photos/seed/ops/100/100'
   },
   client: {
-    name: 'Client User',
+    name: 'Tienda Moda',
     email: 'client@khlothia.pack',
     role: 'client',
     avatarUrl: 'https://picsum.photos/seed/client/100/100'
   },
   courier: {
-    name: 'Courier User',
+    name: 'Pedro Mensajero',
     email: 'courier@khlothia.pack',
     role: 'courier',
     avatarUrl: 'https://picsum.photos/seed/courier/100/100'
   },
   finance: {
-    name: 'Finance User',
+    name: 'Carlos de Finanzas',
     email: 'finance@khlothia.pack',
     role: 'finance',
     avatarUrl: 'https://picsum.photos/seed/finance/100/100'
   },
   warehouse: {
-    name: 'Warehouse User',
+    name: 'Maria de Almacén',
     email: 'warehouse@khlothia.pack',
     role: 'warehouse',
     avatarUrl: 'https://picsum.photos/seed/warehouse/100/100'
   }
 };
+
+const mockComments: OrderComment[] = [
+    {
+        id: 'comment1',
+        user: { name: 'Ana de Operaciones', avatarUrl: mockUsers.operations.avatarUrl },
+        createdAt: '2024-07-22T10:05:00Z',
+        text: 'Se contactó al cliente para confirmar dirección. Todo correcto.',
+    },
+    {
+        id: 'comment2',
+        user: { name: 'Tienda Moda' },
+        createdAt: '2024-07-22T10:10:00Z',
+        text: '¡Gracias por confirmar! Por favor proceder.',
+    }
+];
+
+const mockHistory: OrderEvent[] = [
+    {
+        id: 'hist1',
+        eventType: 'Status Change',
+        user: { name: 'Sistema' },
+        createdAt: '2024-07-22T10:00:00Z',
+        from: 'Nuevo',
+        to: 'Generado'
+    },
+    {
+        id: 'hist2',
+        eventType: 'Location Change',
+        user: { name: 'Maria de Almacén' },
+        createdAt: '2024-07-22T11:00:00Z',
+        from: 'Recepción',
+        to: 'Alistamiento',
+        subLocation: 'Q1'
+    },
+     {
+        id: 'hist3',
+        eventType: 'Status Change',
+        user: { name: 'Ana de Operaciones' },
+        createdAt: '2024-07-22T11:30:00Z',
+        from: 'Generado',
+        to: 'Confirmado'
+    },
+];
 
 export const mockOrders: Order[] = [
   {
@@ -52,6 +95,10 @@ export const mockOrders: Order[] = [
     estadoDeEmpaque: 'Pendiente',
     paymentType: 'COD',
     deliveryAddress: { id: 'addr1', city: 'Santo Domingo', sector: 'Naco', province: 'DN', addressLine1: 'Calle Fantasía 123' },
+    location: 'Recepción',
+    subLocation: 'P1',
+    comments: mockComments,
+    history: mockHistory,
   },
   {
     id: '2',
@@ -65,6 +112,10 @@ export const mockOrders: Order[] = [
     estadoDeEmpaque: 'Empacado',
     paymentType: 'COD',
     deliveryAddress: { id: 'addr2', city: 'Santiago', sector: 'El Dorado', province: 'Santiago', addressLine1: 'Av. Estrella Sadhalá 45' },
+    location: 'Alistamiento',
+    subLocation: 'Q2',
+    comments: [],
+    history: [],
   },
   {
     id: '3',
@@ -79,6 +130,7 @@ export const mockOrders: Order[] = [
     assignedCourierName: 'Pedro Martinez',
     paymentType: 'COD',
     deliveryAddress: { id: 'addr3', city: 'Santo Domingo', sector: 'Mirador Sur', province: 'DN', addressLine1: 'Av. Anacaona 78' },
+    location: 'En Ruta',
   },
   {
     id: '4',
@@ -94,6 +146,7 @@ export const mockOrders: Order[] = [
     assignedCourierName: 'Juan Castillo',
     paymentType: 'COD',
     deliveryAddress: { id: 'addr4', city: 'Punta Cana', sector: 'Bávaro', province: 'La Altagracia', addressLine1: 'Residencial Palma Real, Villa 15' },
+    location: 'En Ruta',
   },
   {
     id: '5',
@@ -108,6 +161,7 @@ export const mockOrders: Order[] = [
     assignedCourierName: 'Pedro Martinez',
     paymentType: 'COD',
     deliveryAddress: { id: 'addr5', city: 'Santo Domingo', sector: 'Gazcue', province: 'DN', addressLine1: 'Calle Moises Garcia 10' },
+    location: 'En Ruta',
   },
   {
     id: '6',
@@ -121,6 +175,7 @@ export const mockOrders: Order[] = [
     estadoDeEmpaque: 'Pendiente',
     paymentType: 'COD',
     deliveryAddress: { id: 'addr6', city: 'La Romana', sector: 'Centro', province: 'La Romana', addressLine1: 'Av. Libertad 22' },
+    location: 'Despacho',
   },
   {
     id: '7',
