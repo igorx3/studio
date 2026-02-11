@@ -142,7 +142,7 @@ export function ArticleFormDialog({ isOpen, onOpenChange, article, stores }: Art
 
       let photoUrl: string | undefined = article?.photos?.[0];
 
-      if (values.photo) {
+      if (values.photo && values.photo instanceof File) {
         const file: File = values.photo;
         const fileRef = ref(storage, `inventory/${article?.id || 'new'}/${file.name}`);
         const uploadResult = await uploadBytes(fileRef, file);
@@ -178,12 +178,30 @@ export function ArticleFormDialog({ isOpen, onOpenChange, article, stores }: Art
       if (article) {
         // Update existing article
         const articleRef = doc(firestore, 'inventory', article.id);
-        await updateDoc(articleRef, dataToSave);
-
-        // TODO: Create 'adjustment' movement if stock changed manually
+        
+        // Create 'adjustment' movement if stock changed manually
         if (article.stockAvailable !== values.stockAvailable) {
-            console.log("Stock was adjusted. An 'adjustment' movement should be created here.");
+            const stockDifference = values.stockAvailable - article.stockAvailable;
+            await addDoc(collection(firestore, 'inventoryMovements'), {
+                itemId: article.id,
+                itemName: values.name,
+                itemSku: values.sku,
+                storeId: values.storeId,
+                storeName: storeName,
+                movementType: 'adjustment',
+                referenceId: article.id,
+                referenceType: 'adjustment',
+                quantity: stockDifference,
+                stockBefore: article.stockAvailable,
+                stockAfter: values.stockAvailable,
+                userId: user.uid,
+                userName: user.name || 'Sistema',
+                notes: 'Ajuste manual desde ficha de artículo',
+                createdAt: serverTimestamp(),
+            });
         }
+        
+        await updateDoc(articleRef, dataToSave);
 
         toast({ title: 'Artículo actualizado', description: 'El artículo ha sido actualizado correctamente.' });
       } else {
@@ -209,7 +227,7 @@ export function ArticleFormDialog({ isOpen, onOpenChange, article, stores }: Art
                 stockBefore: 0,
                 stockAfter: values.stockAvailable,
                 userId: user.uid,
-                userName: user.name,
+                userName: user.name || 'Sistema',
                 notes: 'Entrada inicial de inventario',
                 createdAt: serverTimestamp(),
             });
@@ -284,7 +302,7 @@ export function ArticleFormDialog({ isOpen, onOpenChange, article, stores }: Art
                     <FormItem><FormLabel>Valor Declarado (RD$)*</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="stockAvailable" render={({ field }) => (
-                    <FormItem><FormLabel>Stock Inicial/Disponible*</FormLabel><FormControl><Input type="number" {...field} disabled={!!article} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Stock Inicial/Disponible*</FormLabel><FormControl><Input type="number" {...field} disabled={!article && !!article?.id} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="minStock" render={({ field }) => (
                     <FormItem><FormLabel>Punto de Reorden*</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
