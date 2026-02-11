@@ -4,6 +4,7 @@ import React, { ReactNode, useEffect, useState } from "react";
 import { initializeApp, getApp, getApps, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
+import { getStorage, FirebaseStorage } from "firebase/storage";
 import { firebaseConfig } from "./client";
 import { FirebaseContext } from "./context";
 
@@ -11,6 +12,7 @@ export function FirebaseProvider({ children }: { children: ReactNode }) {
     const [app, setApp] = useState<FirebaseApp | undefined>(undefined);
     const [auth, setAuth] = useState<Auth | undefined>(undefined);
     const [firestore, setFirestore] = useState<Firestore | undefined>(undefined);
+    const [storage, setStorage] = useState<FirebaseStorage | undefined>(undefined);
 
     useEffect(() => {
         if (firebaseConfig.apiKey) {
@@ -18,13 +20,14 @@ export function FirebaseProvider({ children }: { children: ReactNode }) {
             setApp(appInstance);
             setAuth(getAuth(appInstance));
             setFirestore(getFirestore(appInstance));
+            setStorage(getStorage(appInstance));
         } else {
             console.error("Firebase API Key is missing. Please set NEXT_PUBLIC_FIREBASE_API_KEY in your environment.");
         }
     }, []);
 
     return (
-        <FirebaseContext.Provider value={{ app, auth, firestore }}>
+        <FirebaseContext.Provider value={{ app, auth, firestore, storage }}>
         {children}
         </FirebaseContext.Provider>
     );

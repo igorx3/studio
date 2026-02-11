@@ -4,9 +4,11 @@ import { createContext } from "react";
 import { FirebaseApp } from "firebase/app";
 import { Auth } from "firebase/auth";
 import { Firestore } from "firebase/firestore";
+import { FirebaseStorage } from "firebase/storage";
 
 export const FirebaseContext = createContext<{
   app: FirebaseApp | undefined;
   auth: Auth | undefined;
   firestore: Firestore | undefined;
+  storage: FirebaseStorage | undefined;
 } | null>(null);
