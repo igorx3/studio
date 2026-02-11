@@ -30,40 +30,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const firestore = firebaseContext?.firestore;
 
   useEffect(() => {
-    if (!auth || !firestore) {
-      // Firebase is not ready yet, `isLoading` remains true.
-      return;
-    }
+    if (auth && firestore) {
+      const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+        if (fbUser) {
+          setFirebaseUser(fbUser);
+          const userDocRef = doc(firestore, 'users', fbUser.uid);
+          const userDocSnap = await getDoc(userDocRef);
 
-    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
-      if (fbUser) {
-        setFirebaseUser(fbUser);
-        const userDocRef = doc(firestore, 'users', fbUser.uid);
-        const userDocSnap = await getDoc(userDocRef);
-
-        if (userDocSnap.exists()) {
-          const userData = userDocSnap.data() as User;
-          setUser(userData);
+          if (userDocSnap.exists()) {
+            const userData = userDocSnap.data() as User;
+            setUser(userData);
+          } else {
+            // Create a new user profile if it doesn't exist
+            const newUser: User = {
+              uid: fbUser.uid,
+              name: fbUser.displayName,
+              email: fbUser.email,
+              avatarUrl: fbUser.photoURL,
+              role: 'client', // Default role
+            };
+            await setDoc(userDocRef, { ...newUser, createdAt: serverTimestamp() });
+            setUser(newUser);
+          }
         } else {
-          // Create a new user profile if it doesn't exist
-          const newUser: User = {
-            uid: fbUser.uid,
-            name: fbUser.displayName,
-            email: fbUser.email,
-            avatarUrl: fbUser.photoURL,
-            role: 'client', // Default role
-          };
-          await setDoc(userDocRef, { ...newUser, createdAt: serverTimestamp() });
-          setUser(newUser);
+          setUser(null);
+          setFirebaseUser(null);
         }
-      } else {
-        setUser(null);
-        setFirebaseUser(null);
-      }
+        setIsLoading(false);
+      });
+      return () => unsubscribe();
+    } else {
+      // If firebase is not available, we assume no user is logged in and stop loading.
+      // This prevents the infinite loading screen.
       setIsLoading(false);
-    });
-
-    return () => unsubscribe();
+      setUser(null);
+      setFirebaseUser(null);
+    }
   }, [auth, firestore]);
 
   const loginWithGoogle = async () => {
