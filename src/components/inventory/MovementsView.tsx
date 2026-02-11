@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useContext, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -9,10 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Calendar as CalendarIcon, Loader2, Search } from "lucide-react";
-import { format, toDate } from "date-fns";
+import { format } from "date-fns";
 import { DateRange } from "react-day-picker";
 import { useAuth } from '@/context/auth-context';
-import { FirebaseContext } from '@/firebase/context';
+import { useFirestore } from '@/firebase';
 import { collection, query, where, orderBy, limit, getDocs, startAfter, endBefore, limitToLast, Timestamp } from 'firebase/firestore';
 import type { InventoryMovement, Store } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -33,7 +33,7 @@ const movementTypeColors: { [key: string]: string } = {
 
 export function MovementsView({ stores }: { stores: Store[] }) {
     const { user } = useAuth();
-    const { firestore, isInitializing } = useContext(FirebaseContext);
+    const firestore = useFirestore();
 
     const [movements, setMovements] = useState<InventoryMovement[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -100,10 +100,10 @@ export function MovementsView({ stores }: { stores: Store[] }) {
     };
     
     useEffect(() => {
-        if (!isInitializing) {
+        if (firestore) {
             handleFilter();
         }
-    }, [isInitializing, storeFilter, dateRange, user]);
+    }, [firestore, storeFilter, dateRange, user]);
     
     const handleFilter = () => {
         setCurrentPage(1);

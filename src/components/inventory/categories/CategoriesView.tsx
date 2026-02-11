@@ -1,9 +1,8 @@
 'use client';
-import { useState, useMemo, useEffect, useContext } from 'react';
+import { useState, useMemo } from 'react';
 import type { ArticleCategory } from '@/lib/types';
-import { useAuth } from '@/context/auth-context';
-import { FirebaseContext } from '@/firebase/context';
-import { collection, query, onSnapshot, orderBy } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, orderBy } from 'firebase/firestore';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -14,30 +13,18 @@ import { CategoryFormDialog } from './CategoryFormDialog';
 import { format } from 'date-fns';
 
 export function CategoriesView() {
-    const { user } = useAuth();
-    const { firestore } = useContext(FirebaseContext);
-
-    const [categories, setCategories] = useState<ArticleCategory[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const firestore = useFirestore();
     const [searchTerm, setSearchTerm] = useState('');
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState<ArticleCategory | null>(null);
 
-    useEffect(() => {
-        if (!firestore) return;
-        setIsLoading(true);
-        const q = query(collection(firestore, "articleCategories"), orderBy("name"));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const cats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ArticleCategory));
-            setCategories(cats);
-            setIsLoading(false);
-        }, (error) => {
-            console.error("Error fetching categories: ", error);
-            setIsLoading(false);
-        });
-        return () => unsubscribe();
+    const categoriesQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return query(collection(firestore, "articleCategories"), orderBy("name"));
     }, [firestore]);
-    
+    const { data: categoriesData, isLoading } = useCollection<ArticleCategory>(categoriesQuery);
+    const categories = useMemo(() => categoriesData || [], [categoriesData]);
+
     const handleNew = () => {
         setSelectedCategory(null);
         setIsFormOpen(true);
@@ -49,6 +36,7 @@ export function CategoriesView() {
     };
 
     const filteredItems = useMemo(() => {
+        if (!categories) return [];
         if (!searchTerm) return categories;
         return categories.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()));
     }, [searchTerm, categories]);
@@ -109,7 +97,7 @@ export function CategoriesView() {
                                             {item.status === 'active' ? 'Activa' : 'Inactiva'}
                                         </Badge>
                                     </TableCell>
-                                    <TableCell>{item.createdAt ? format(item.createdAt.toDate(), 'dd/MM/yyyy') : 'N/A'}</TableCell>
+                                    <TableCell>{item.createdAt ? format((item.createdAt as any).toDate(), 'dd/MM/yyyy') : 'N/A'}</TableCell>
                                 </TableRow>
                             ))
                         )}

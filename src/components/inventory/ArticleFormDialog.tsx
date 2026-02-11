@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -14,9 +14,9 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, UploadCloud, ChevronDown, Droplets } from 'lucide-react';
 import type { InventoryItem, Store, InventoryMovement, InventoryItemPrivate, PackageLocation, WarehouseSubLocation, ArticleCategory } from '@/lib/types';
 import { useAuth } from '@/context/auth-context';
-import { FirebaseContext } from '@/firebase/context';
-import { collection, addDoc, serverTimestamp, getDocs, query, where, runTransaction, doc, getDoc, setDoc, onSnapshot, updateDoc, orderBy } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { useFirestore, useFirebaseApp, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, addDoc, serverTimestamp, getDocs, query, where, runTransaction, doc, getDoc, setDoc, onSnapshot, updateDoc, orderBy, Timestamp } from 'firebase/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import Image from 'next/image';
 import { Switch } from '../ui/switch';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
@@ -75,14 +75,22 @@ type FormData = z.infer<typeof formSchema>;
 
 export function ArticleFormDialog({ isOpen, onOpenChange, article, stores }: { isOpen: boolean, onOpenChange: (open: boolean) => void, article?: InventoryItem | null, stores: Store[] }) {
   const { user } = useAuth();
-  const { firestore, storage } = useContext(FirebaseContext);
+  const firestore = useFirestore();
+  const firebaseApp = useFirebaseApp();
+  const storage = getStorage(firebaseApp);
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewImages, setPreviewImages] = useState<string[]>([]);
   const [newImageFiles, setNewImageFiles] = useState<File[]>([]);
   const [privateData, setPrivateData] = useState<InventoryItemPrivate | null>(null);
   const [isDropshippingOpen, setIsDropshippingOpen] = useState(false);
-  const [categories, setCategories] = useState<ArticleCategory[]>([]);
+
+  const categoriesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, "articleCategories"), where("status", "==", "active"), orderBy("name"));
+  }, [firestore]);
+  const { data: categoriesData } = useCollection<ArticleCategory>(categoriesQuery);
+  const categories = useMemo(() => categoriesData || [], [categoriesData]);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -90,16 +98,6 @@ export function ArticleFormDialog({ isOpen, onOpenChange, article, stores }: { i
   });
 
   const isAdmin = user?.role === 'admin' || user?.role === 'operations';
-
-   useEffect(() => {
-    if (!firestore) return;
-    const q = query(collection(firestore, "articleCategories"), where("status", "==", "active"), orderBy("name"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const cats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ArticleCategory));
-      setCategories(cats);
-    });
-    return () => unsubscribe();
-  }, [firestore]);
 
   useEffect(() => {
     const fetchPrivateData = async () => {
@@ -137,7 +135,7 @@ export function ArticleFormDialog({ isOpen, onOpenChange, article, stores }: { i
           length: article.dimensions?.length,
           width: article.dimensions?.width,
           height: article.dimensions?.height,
-          expirationDate: article.expirationDate && article.expirationDate.seconds ? new Date(article.expirationDate.seconds * 1000).toISOString().split('T')[0] : '',
+          expirationDate: article.expirationDate && (article.expirationDate as any).seconds ? new Date((article.expirationDate as any).seconds * 1000).toISOString().split('T')[0] : '',
           
           dropshippingEnabled: article.dropshipping?.enabled || false,
           dropshippingMinPrice: article.dropshipping?.minPrice,
@@ -211,7 +209,7 @@ export function ArticleFormDialog({ isOpen, onOpenChange, article, stores }: { i
             photoUrls = [...photoUrls, ...newUrls];
         }
 
-        const itemData: Omit<InventoryItem, 'id' | 'createdAt' | 'updatedAt' | 'cost'> = {
+        const itemData: Omit<InventoryItem, 'id' | 'createdAt' | 'updatedAt'> = {
             name: values.name,
             sku: values.sku,
             storeId: values.storeId,
@@ -219,6 +217,7 @@ export function ArticleFormDialog({ isOpen, onOpenChange, article, stores }: { i
             
             normalPrice: values.normalPrice,
             minSalePrice: values.minSalePrice,
+            cost: values.cost,
 
             initialStock: isNewArticle ? values.initialStock : article!.initialStock,
             stockAvailable: isNewArticle ? values.initialStock : article!.stockAvailable,
@@ -251,7 +250,6 @@ export function ArticleFormDialog({ isOpen, onOpenChange, article, stores }: { i
 
         const stockBefore = article?.stockAvailable ?? 0;
         const stockAfter = isNewArticle ? values.initialStock : (values.stockAvailable === stockBefore ? stockBefore : values.stockAvailable);
-        const stockDifference = stockAfter - stockBefore;
 
         await runTransaction(firestore, async (transaction) => {
             const invRef = doc(firestore, 'inventory', articleId);
@@ -272,6 +270,7 @@ export function ArticleFormDialog({ isOpen, onOpenChange, article, stores }: { i
                 }
             } else {
                  const currentItemSnap = await transaction.get(invRef);
+                 if(!currentItemSnap.exists()) throw new Error("Item does not exist");
                  const currentItemData = currentItemSnap.data() as InventoryItem;
 
                  const newStockAvailable = values.stockAvailable;

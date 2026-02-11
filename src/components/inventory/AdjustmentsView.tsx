@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useContext, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "../ui/button";
@@ -10,14 +10,14 @@ import { Textarea } from '../ui/textarea';
 import { X, PlusCircle, Loader2 } from 'lucide-react';
 import type { InventoryItem, Store } from '@/lib/types';
 import { useAuth } from '@/context/auth-context';
-import { FirebaseContext } from '@/firebase/context';
+import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { collection, doc, runTransaction, serverTimestamp, getDoc, writeBatch, where, query, getDocs } from 'firebase/firestore';
+import { collection, doc, runTransaction, serverTimestamp } from 'firebase/firestore';
 
 
 const EntryForm = ({ stores, allItems }: { stores: Store[], allItems: InventoryItem[] }) => {
     const { user } = useAuth();
-    const { firestore } = useContext(FirebaseContext);
+    const firestore = useFirestore();
     const { toast } = useToast();
 
     const [storeId, setStoreId] = useState('');

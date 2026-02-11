@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect, useContext } from 'react';
+import { useMemo } from 'react';
 import { useAuth } from "@/context/auth-context";
 import React from 'react';
-import { FirebaseContext } from '@/firebase/context';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
 
 
 import { Card, CardHeader } from "@/components/ui/card";
@@ -20,53 +20,30 @@ import type { InventoryItem, Store } from '@/lib/types';
 
 export default function InventarioPage() {
   const { user } = useAuth();
-  const { firestore } = useContext(FirebaseContext);
+  const firestore = useFirestore();
   
-  const [items, setItems] = useState<InventoryItem[] | null>(null);
-  const [stores, setStores] = useState<Store[]>([]);
-  const [isLoadingStores, setIsLoadingStores] = useState(true);
-
-  const isClient = user?.role === 'client';
   const isAdmin = user?.role === 'admin' || user?.role === 'operations';
 
-  // Fetch Stores
-  useEffect(() => {
-    if (!firestore) return;
-    setIsLoadingStores(true);
-    const storesQuery = query(collection(firestore, 'stores'));
-    const unsubscribe = onSnapshot(storesQuery, (snapshot) => {
-      const storesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Store));
-      setStores(storesData);
-      setIsLoadingStores(false);
-    }, (error) => {
-        console.error("Error fetching stores: ", error);
-        setIsLoadingStores(false);
-    });
-    return () => unsubscribe();
+  const storesQuery = useMemoFirebase(() => {
+      if (!firestore) return null;
+      return query(collection(firestore, 'stores'));
   }, [firestore]);
 
-  // Fetch Inventory Items
-  useEffect(() => {
-    if (!firestore) return;
-    setItems(null);
-    
-    let itemsQuery;
-    if (isClient && user?.storeId) {
-      itemsQuery = query(collection(firestore, 'inventory'), where('storeId', '==', user.storeId));
-    } else {
-      itemsQuery = query(collection(firestore, 'inventory'));
+  const itemsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    if (user?.role === 'client' && user.storeId) {
+      return query(collection(firestore, 'inventory'), where('storeId', '==', user.storeId));
     }
+    return query(collection(firestore, 'inventory'));
+  }, [firestore, user?.role, user?.storeId]);
 
-    const unsubscribe = onSnapshot(itemsQuery, (snapshot) => {
-      const itemsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InventoryItem));
-      setItems(itemsData);
-    }, (error) => {
-      console.error("Error fetching inventory items:", error);
-      setItems([]);
-    });
-    return () => unsubscribe();
-  }, [firestore, isClient, user?.storeId]);
+  const { data: storesData, isLoading: isLoadingStores } = useCollection<Store>(storesQuery);
+  const { data: itemsData, isLoading: isLoadingItems } = useCollection<InventoryItem>(itemsQuery);
 
+  const stores = useMemo(() => storesData || [], [storesData]);
+  const items = useMemo(() => itemsData || [], [itemsData]);
+  
+  const isLoading = isLoadingStores || isLoadingItems;
 
   return (
     <div className="space-y-6">
@@ -79,7 +56,7 @@ export default function InventarioPage() {
           </div>
       </div>
       
-      {items === null ? (
+      {isLoading ? (
         <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
             {[...Array(6)].map((_, i) => <Card key={i}><CardHeader className="h-24 animate-pulse bg-muted/50 rounded-lg"></CardHeader></Card>)}
         </div>
@@ -94,7 +71,7 @@ export default function InventarioPage() {
           {isAdmin && <TabsTrigger value="adjustments"><Settings2 className="mr-2 h-4 w-4" /> Entradas, Salidas y Ajustes</TabsTrigger>}
           {isAdmin && <TabsTrigger value="categories"><Tags className="mr-2 h-4 w-4" /> Categorías</TabsTrigger>}
         </TabsList>
-        {(items === null || isLoadingStores) ? (
+        {isLoading ? (
             <div className="flex items-center justify-center p-16">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
