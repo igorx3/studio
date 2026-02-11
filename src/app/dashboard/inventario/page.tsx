@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { useAuth } from "@/context/auth-context";
 import React from 'react';
 import { FirebaseContext } from '@/firebase/context';
@@ -9,11 +9,12 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore';
 
 import { Card, CardHeader } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Package, Truck, Settings2, Loader2 } from "lucide-react";
+import { Package, Truck, Settings2, Loader2, Tags } from "lucide-react";
 import { InventoryDashboard } from "@/components/inventory/InventoryDashboard";
 import { ArticlesView } from "@/components/inventory/ArticlesView";
 import { MovementsView } from "@/components/inventory/MovementsView";
 import { AdjustmentsView } from "@/components/inventory/AdjustmentsView";
+import { CategoriesView } from "@/components/inventory/categories/CategoriesView";
 import type { InventoryItem, Store } from '@/lib/types';
 
 
@@ -26,6 +27,7 @@ export default function InventarioPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   const isClient = user?.role === 'client';
+  const isAdmin = user?.role === 'admin' || user?.role === 'operations';
 
   // Fetch Stores
   useEffect(() => {
@@ -89,7 +91,8 @@ export default function InventarioPage() {
         <TabsList>
           <TabsTrigger value="articles"><Package className="mr-2 h-4 w-4" /> Artículos</TabsTrigger>
           <TabsTrigger value="movements"><Truck className="mr-2 h-4 w-4" /> Movimientos</TabsTrigger>
-          {!isClient && <TabsTrigger value="adjustments"><Settings2 className="mr-2 h-4 w-4" /> Entradas, Salidas y Ajustes</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="adjustments"><Settings2 className="mr-2 h-4 w-4" /> Entradas, Salidas y Ajustes</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="categories"><Tags className="mr-2 h-4 w-4" /> Categorías</TabsTrigger>}
         </TabsList>
         {isLoading && !isInitializing ? (
             <div className="flex items-center justify-center p-16">
@@ -103,9 +106,14 @@ export default function InventarioPage() {
                 <TabsContent value="movements" className="mt-4">
                 <MovementsView stores={stores} />
                 </TabsContent>
-                {!isClient && (
+                {isAdmin && (
                     <TabsContent value="adjustments" className="mt-4">
                     <AdjustmentsView stores={stores} allItems={items} />
+                    </TabsContent>
+                )}
+                 {isAdmin && (
+                    <TabsContent value="categories" className="mt-4">
+                    <CategoriesView />
                     </TabsContent>
                 )}
             </>

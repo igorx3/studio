@@ -45,8 +45,8 @@ export type OrderStatus =
 
 export type ServiceType = 'logistics_360' | 'logistics_180' | 'fulfillment';
 export type ThirdPartyCourier = 'chintra' | 'aurelpack';
-export type Location = 'Alistamiento' | 'Despacho' | 'Recepción' | 'En Ruta' | 'Almacén';
-export type SubLocation = 'Q1' | 'Q2' | 'K1' | 'K2' | 'P1' | 'P2' | 'P3' | 'P4' | 'P5' | 'P6' | 'P7' | 'P8' | 'P9' | 'P10' | 'P11' | 'P12';
+export type PackageLocation = 'alistamiento' | 'despacho' | 'recepcion' | 'en_ruta';
+export type WarehouseSubLocation = 'Q1' | 'Q2' | 'K1' | 'K2' | 'P1' | 'P2' | 'P3' | 'P4' | 'P5' | 'P6' | 'P7' | 'P8' | 'P9' | 'P10' | 'P11' | 'P12';
 
 export interface Address {
     id: string;
@@ -125,8 +125,8 @@ export interface Order {
   thirdPartyCarrier?: ThirdPartyCourier;
   warehouse: {
     packingStatus: 'pending' | 'packed' | 'dispatched';
-    mainLocation: Location;
-    subLocation: SubLocation;
+    mainLocation: string; // DEPRECATED, use packageLocation in InventoryItem
+    subLocation: string; // DEPRECATED, use warehouseSubLocation in InventoryItem
   };
   isDraft: boolean;
   draftTrackingId?: string;
@@ -146,8 +146,8 @@ export interface Order {
   assignedCourierName?: string;
   deliveredAt?: string;
   deliveryAddress?: Address;
-  location?: Location;
-  subLocation?: SubLocation;
+  location?: string;
+  subLocation?: string;
   comments?: OrderComment[];
   history?: OrderEvent[];
   financials?: OrderFinancials;
@@ -181,7 +181,7 @@ export interface OrderEvent {
   to?: string;
   comment?: string;
   photoUrl?: string; // For novelty evidence
-  subLocation?: SubLocation;
+  subLocation?: string;
 }
 
 export interface Store {
@@ -234,12 +234,14 @@ export interface InventoryItem {
   description?: string;
   photos: string[];
   declaredValue: number;
+  initialStock: number;
   stockAvailable: number;
   stockReserved: number;
   stockTotal: number;
   minStock: number;
   idealStock: number;
-  warehouseLocation: SubLocation;
+  packageLocation?: PackageLocation;
+  warehouseSubLocation?: WarehouseSubLocation;
   weight: number; // in grams
   dimensions: {
     length: number; // in cm
@@ -274,7 +276,7 @@ export interface InventoryMovement {
   storeName: string;
   movementType: InventoryMovementType;
   referenceId: string; // Order tracking ID or adjustment ID
-  referenceType: 'order' | 'entry' | 'exit' | 'adjustment' | 'item_creation';
+  referenceType: 'order' | 'entry' | 'exit' | 'adjustment' | 'item_creation' | 'initial_stock';
   quantity: number; // +N for entry, -N for exit
   stockBefore: number;
   stockAfter: number;
@@ -322,4 +324,13 @@ export interface Client {
     successRate: number;
     createdAt: any; // serverTimestamp
     updatedAt: any; // serverTimestamp
+}
+
+export interface ArticleCategory {
+  id: string;
+  name: string;
+  description?: string;
+  status: 'active' | 'inactive';
+  createdAt: any;
+  updatedAt: any;
 }

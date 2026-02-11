@@ -24,6 +24,7 @@ export function ArticlesView({ items, stores }: ArticlesViewProps) {
     
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [selectedArticle, setSelectedArticle] = useState<InventoryItem | null>(null);
+    const isAdmin = user?.role === 'admin' || user?.role === 'operations';
 
     const handleNewArticle = () => {
         setSelectedArticle(null);
@@ -46,7 +47,7 @@ export function ArticlesView({ items, stores }: ArticlesViewProps) {
 
     const getStatus = (item: InventoryItem): { label: string; badgeVariant: 'destructive' | 'default' | 'secondary' | 'outline'; textClass: string; } => {
         if (item.stockAvailable <= 0) return { label: 'Agotado', badgeVariant: 'destructive', textClass: 'text-red-500' };
-        if (item.stockAvailable <= item.minStock) return { label: 'Stock Crítico', badgeVariant: 'destructive', textClass: 'text-red-500' };
+        if (item.stockAvailable <= item.minStock) return { label: 'Stock Crítico', badgeVariant: 'destructive', textClass: 'text-orange-500' };
         if (item.stockAvailable < item.idealStock) return { label: 'Stock Bajo', badgeVariant: 'default', textClass: 'text-yellow-500' };
         return { label: 'Activo', badgeVariant: 'secondary', textClass: 'text-green-500' };
     }
@@ -76,7 +77,7 @@ export function ArticlesView({ items, stores }: ArticlesViewProps) {
                     <Button variant="outline" size="icon" onClick={() => setViewMode('grid')} disabled={viewMode === 'grid'}>
                         <LayoutGrid className="h-4 w-4" />
                     </Button>
-                    {user?.role !== 'client' && (
+                    {isAdmin && (
                         <Button onClick={handleNewArticle}>
                             <PlusCircle className="mr-2 h-4 w-4" />
                             Nuevo Artículo
@@ -97,14 +98,14 @@ export function ArticlesView({ items, stores }: ArticlesViewProps) {
                                 <TableHead>Stock</TableHead>
                                 <TableHead>Reservado</TableHead>
                                 <TableHead>Valor</TableHead>
-                                {user?.role !== 'client' && <TableHead>Ubicación</TableHead>}
+                                {isAdmin && <TableHead>Sub-Ubicación</TableHead>}
                                 <TableHead>Estado</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {filteredItems.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={9} className="h-24 text-center">
+                                    <TableCell colSpan={isAdmin ? 9 : 8} className="h-24 text-center">
                                         No hay artículos en el inventario.
                                     </TableCell>
                                 </TableRow>
@@ -122,7 +123,7 @@ export function ArticlesView({ items, stores }: ArticlesViewProps) {
                                         <TableCell className={cn("font-bold", status.textClass)}>{item.stockAvailable}</TableCell>
                                         <TableCell>{item.stockReserved}</TableCell>
                                         <TableCell>${item.declaredValue.toLocaleString()}</TableCell>
-                                        {user?.role !== 'client' && <TableCell>{item.warehouseLocation}</TableCell>}
+                                        {isAdmin && <TableCell>{item.warehouseSubLocation}</TableCell>}
                                         <TableCell>
                                             <Badge variant={status.badgeVariant}>{status.label}</Badge>
                                         </TableCell>
