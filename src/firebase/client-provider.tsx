@@ -11,8 +11,7 @@ export function FirebaseProvider({ children }: { children: ReactNode }) {
     const [auth, setAuth] = useState<Auth | undefined>(undefined);
     const [firestore, setFirestore] = useState<Firestore | undefined>(undefined);
     const [storage, setStorage] = useState<FirebaseStorage | undefined>(undefined);
-    const [isInitializing, setIsInitializing] = useState(true);
-
+    
     useEffect(() => {
         const firebaseConfig = {
             apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -23,15 +22,16 @@ export function FirebaseProvider({ children }: { children: ReactNode }) {
             appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
         };
         
-        if (firebaseConfig.apiKey) {
+        if (firebaseConfig.apiKey && !auth) {
             const appInstance = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
             setApp(appInstance);
             setAuth(getAuth(appInstance));
             setFirestore(getFirestore(appInstance));
             setStorage(getStorage(appInstance));
         }
-        setIsInitializing(false);
-    }, []);
+    }, [auth]);
+
+    const isInitializing = auth === undefined;
 
     return (
         <FirebaseContext.Provider value={{ app, auth, firestore, storage, isInitializing }}>
