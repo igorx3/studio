@@ -111,9 +111,10 @@ export function OrdersList({ orders, onOrderClick }: OrdersListProps) {
                 </Button>
             </div>
         </div>
-        <Card>
+        <Card className="flex flex-col h-[calc(100vh-20rem)]">
+          <div className="flex-grow overflow-y-auto">
             <Table>
-                <TableHeader>
+                <TableHeader className="sticky top-0 bg-card z-10">
                     <TableRow>
                         <TableHead className="w-[50px]"><Checkbox /></TableHead>
                         <TableHead>Tracking ID</TableHead>
@@ -167,7 +168,8 @@ export function OrdersList({ orders, onOrderClick }: OrdersListProps) {
                     )}
                 </TableBody>
             </Table>
-            <div className="flex items-center justify-between p-4 border-t border-border">
+          </div>
+            <div className="flex-shrink-0 flex items-center justify-between p-4 border-t border-border">
                 <div className="text-sm text-muted-foreground">
                     Mostrando {paginatedOrders.length} de {filteredOrders.length} pedidos
                 </div>

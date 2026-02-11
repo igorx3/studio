@@ -40,7 +40,9 @@ import {
   Briefcase,
   ChevronDown,
   Database,
-  LayoutGrid
+  LayoutGrid,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
@@ -192,7 +194,15 @@ export function DashboardSidebar() {
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter>
-        <UserMenu />
+        <div className="p-2 space-y-2">
+            <Button variant="ghost" size="icon" className="mx-auto w-full group-data-[collapsible=icon]:w-auto">
+                <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+                <span className="sr-only group-data-[collapsible=icon]:hidden">Toggle theme</span>
+                <span className="hidden group-data-[collapsible=icon]:absolute">Toggle theme</span>
+            </Button>
+            <UserMenu />
+        </div>
       </SidebarFooter>
     </Sidebar>
   );
