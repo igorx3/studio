@@ -213,7 +213,7 @@
     },
     "Client": {
       "title": "Client",
-      "description": "Represents an end recipient of packages.",
+      "description": "Represents an end recipient of packages. ID is the phone number.",
       "type": "object",
       "properties": {
         "name": { "type": "string" },
@@ -346,53 +346,17 @@
     "providers": ["google.com", "password"]
   },
   "firestore": {
-    "/stores/{storeId}": {
-      "schema": { "$ref": "#/entities/Store" },
-      "description": "Collection of client stores."
-    },
-    "/inventory/{itemId}": {
-      "schema": { "$ref": "#/entities/InventoryItem" },
-      "description": "Collection of all inventory items."
-    },
-    "/inventoryMovements/{movementId}": {
-      "schema": { "$ref": "#/entities/InventoryMovement" },
-      "description": "Log of all stock movements."
-    },
-    "/inventoryTransactions/{transactionId}": {
-      "schema": { "$ref": "#/entities/InventoryTransaction" },
-      "description": "Collection of manual inventory transactions."
-    },
-    "/orders/{orderId}": {
-      "schema": { "$ref": "#/entities/Order" },
-      "description": "Collection of all delivery orders."
-    },
-    "/clients/{clientId}": {
-      "schema": { "$ref": "#/entities/Client" },
-      "description": "Collection of end recipients, identified by phone number."
-    },
-    "/orderComments/{commentId}": {
-      "schema": { "$ref": "#/entities/OrderComment" },
-      "description": "Comments associated with an order."
-    },
-    "/orderNovelties/{noveltyId}": {
-      "schema": { "$ref": "#/entities/OrderNovelty" },
-      "description": "Records of delivery novelties for an order."
-    },
-    "/orderStatusHistory/{historyId}": {
-      "schema": { "$ref": "#/entities/OrderStatusHistory" },
-      "description": "Log of status changes for an order."
-    },
-    "/orderLocationHistory/{historyId}": {
-      "schema": { "$ref": "#/entities/OrderLocationHistory" },
-      "description": "Log of location changes for an order."
-    },
-    "/trackingCounter/current": {
-      "schema": { "$ref": "#/entities/TrackingCounter" },
-      "description": "Singleton document for generating sequential tracking IDs."
-    },
-    "/users/{userId}": {
-        "schema": { "$ref": "#/entities/UserProfile" },
-        "description": "Stores user profile data and roles."
-    }
+    "/stores/{storeId}": { "schema": { "$ref": "#/entities/Store" } },
+    "/inventory/{itemId}": { "schema": { "$ref": "#/entities/InventoryItem" } },
+    "/inventoryMovements/{movementId}": { "schema": { "$ref": "#/entities/InventoryMovement" } },
+    "/inventoryTransactions/{transactionId}": { "schema": { "$ref": "#/entities/InventoryTransaction" } },
+    "/orders/{orderId}": { "schema": { "$ref": "#/entities/Order" } },
+    "/clients/{clientId}": { "schema": { "$ref": "#/entities/Client" } },
+    "/orderComments/{commentId}": { "schema": { "$ref": "#/entities/OrderComment" } },
+    "/orderNovelties/{noveltyId}": { "schema": { "$ref": "#/entities/OrderNovelty" } },
+    "/orderStatusHistory/{historyId}": { "schema": { "$ref": "#/entities/OrderStatusHistory" } },
+    "/orderLocationHistory/{historyId}": { "schema": { "$ref": "#/entities/OrderLocationHistory" } },
+    "/trackingCounter/current": { "schema": { "$ref": "#/entities/TrackingCounter" } },
+    "/users/{userId}": { "schema": { "$ref": "#/entities/UserProfile" } }
   }
 }

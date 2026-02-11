@@ -2,17 +2,61 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Default deny all access
-    // allow read, write: if false;
-
-    // This is a permissive rule for development.
-    // For production, you should implement more granular security rules
-    // based on user roles and data ownership.
+    // Default deny all access unless a rule allows it
     match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Allow authenticated users to read/write their own profile
+    match /users/{userId} {
+      allow read, write: if request.auth.uid == userId;
+    }
+
+    // Allow authenticated users to read stores
+    match /stores/{storeId} {
+      allow read: if request.auth != null;
+      // Write access only for admins (implement role check)
+      allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Counter can be updated by any authenticated user (for creating orders)
+    match /trackingCounter/current {
+        allow read, write: if request.auth != null;
+    }
+
+    // INVENTORY
+    match /inventory/{itemId} {
+      // Allow reading items
+      allow read: if request.auth != null;
+      // Allow creating items for any authenticated user
+      allow create: if request.auth != null;
+      // Allow updating items only for admin/operations, or for a client for their own store
+      allow update: if request.auth != null && 
+                      (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'operations'] || 
+                      resource.data.storeId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.storeId);
+      // Disallow deletion for now, use a status field
+      allow delete: if false;
+    }
+
+    // ORDERS
+    match /orders/{orderId} {
+        // A client can read their own orders. Admin/ops can read all.
+        allow read: if request.auth != null && 
+                    (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'operations', 'warehouse', 'finance', 'courier'] || 
+                    resource.data.storeId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.storeId);
+        // Any auth user can create an order (e.g. a client)
+        allow create: if request.auth != null;
+        // Only admin/ops can update orders broadly. Clients can only do specific actions.
+        allow update: if request.auth != null &&
+                      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'operations'];
+    }
+    
+    // CLIENTS (Destinatarios)
+    match /clients/{clientId} {
       allow read, write: if request.auth != null;
     }
 
-    // Make log collections immutable (can only be created, not updated or deleted)
+    // IMMUTABLE LOGS
     match /inventoryMovements/{movementId} {
       allow read, create: if request.auth != null;
       allow update, delete: if false;
@@ -31,24 +75,13 @@ service cloud.firestore {
     }
      match /orderNovelties/{noveltyId} {
       allow read, create: if request.auth != null;
-      // Allow updates for resolution
-      allow update: if request.auth != null;
+      allow update: if request.auth != null; // Allow updates for resolution
       allow delete: if false;
     }
-
-    // Users can read/write their own profile
-    match /users/{userId} {
-      allow read, write: if request.auth.uid == userId;
-    }
     
-    // More specific rules for production would go here.
-    // For example:
-    // function isOwner(resourceId, field) {
-    //   return get(/databases/$(database)/documents/your_collection/$(resourceId)).data[field] == request.auth.uid;
-    // }
-    //
-    // match /orders/{orderId} {
-    //   allow read: if isOwner(orderId, 'storeId');
-    // }
+    match /inventoryTransactions/{transactionId} {
+        allow read, create: if request.auth != null;
+        allow update, delete: if false;
+    }
   }
 }

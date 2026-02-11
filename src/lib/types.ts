@@ -143,14 +143,16 @@ export interface Order {
 
 export interface OrderComment {
   id: string;
-  orderId: string;
-  trackingId: string;
-  userId: string;
+  orderId?: string;
+  trackingId?: string;
+  userId?: string;
   userName: string;
-  userRole: UserRole;
-  comment: string;
-  photos: string[];
+  userRole?: UserRole;
+  comment?: string;
+  photos?: string[];
   createdAt: any; // serverTimestamp
+  text: string;
+  user: { name: string, avatarUrl?: string };
 }
 
 export type OrderEventType = 'Status Change' | 'Location Change';
@@ -219,9 +221,6 @@ export interface InventoryItem {
   status: InventoryItemStatus;
   createdAt: any; // serverTimestamp
   updatedAt: any; // serverTimestamp
-
-  // for mock compatibility
-  photoUrl?: string;
 }
 
 export type InventoryMovementType = 
@@ -252,6 +251,31 @@ export interface InventoryMovement {
   userName: string;
   notes?: string;
   createdAt: any; // serverTimestamp
+}
+
+export type InventoryTransactionType = 'entry' | 'exit' | 'adjustment';
+
+export interface InventoryTransaction {
+    id: string;
+    type: InventoryTransactionType;
+    storeId: string;
+    storeName: string;
+    items: {
+        itemId: string,
+        itemName: string,
+        itemSku: string,
+        quantity: number,
+        warehouseLocation: string,
+        condition: 'good' | 'damaged',
+        notes: string
+    }[];
+    reason?: string;
+    referenceNumber?: string;
+    photos: string[];
+    processedBy: string;
+    processedByName: string;
+    authorizedBy?: string;
+    createdAt: any; // serverTimestamp
 }
 
 export interface Client {
