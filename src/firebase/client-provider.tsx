@@ -37,7 +37,8 @@ export function FirebaseProvider({ children }: { children: ReactNode }) {
                 isInitializing: false,
             });
         } else {
-            console.error("Firebase config is missing.");
+            // If config is missing, just stop initializing without logging an error.
+            // Downstream components will handle the absence of Firebase services.
             setServices({ isInitializing: false });
         }
     }, []);
