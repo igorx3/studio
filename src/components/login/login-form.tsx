@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '@/context/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import type { UserRole } from '@/lib/types';
+import { useToast } from '@/hooks/use-toast';
+import { Loader2 } from 'lucide-react';
 
 function GoogleIcon() {
     return (
@@ -38,20 +40,34 @@ function GoogleIcon() {
   }
 
 export function LoginForm() {
-  const { login } = useAuth();
+  const { loginWithGoogle, loginAsDemo, isLoading } = useAuth();
   const [selectedRole, setSelectedRole] = useState<UserRole>('operations');
+  const { toast } = useToast();
+
+  const handleGoogleLogin = async () => {
+    try {
+        await loginWithGoogle();
+    } catch(error) {
+        console.error(error);
+        toast({
+            variant: "destructive",
+            title: "Error de inicio de sesión",
+            description: "No se pudo iniciar sesión con Google. Por favor, inténtalo de nuevo.",
+        });
+    }
+  }
 
   const handleDemoLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedRole) {
-      login(selectedRole);
+      loginAsDemo(selectedRole);
     }
   };
 
   return (
     <div className="space-y-6">
-       <Button variant="outline" className="w-full">
-            <GoogleIcon />
+       <Button variant="outline" className="w-full" onClick={handleGoogleLogin} disabled={isLoading}>
+            {isLoading ? <Loader2 className="animate-spin" /> : <GoogleIcon />}
             <span>Continuar con Google</span>
         </Button>
       
@@ -63,9 +79,9 @@ export function LoginForm() {
       <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
         <div>
           <Label htmlFor="email">Correo electrónico</Label>
-          <Input id="email" type="email" placeholder="tu@email.com" />
+          <Input id="email" type="email" placeholder="tu@email.com" disabled />
         </div>
-        <Button className="w-full bg-primary hover:bg-primary/90">
+        <Button className="w-full bg-primary hover:bg-primary/90" disabled>
             Continuar con Email
         </Button>
       </form>
@@ -89,7 +105,8 @@ export function LoginForm() {
               </SelectContent>
             </Select>
           </div>
-          <Button type="submit" variant="secondary" className="w-full">
+          <Button type="submit" variant="secondary" className="w-full" disabled={isLoading}>
+            {isLoading && <Loader2 className="animate-spin" />}
             Iniciar Sesión Demo
           </Button>
         </form>

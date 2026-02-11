@@ -1,0 +1,398 @@
+{
+  "entities": {
+    "Store": {
+      "title": "Store",
+      "description": "Represents a client store/business that uses the delivery service.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "contactName": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" },
+        "logo": { "type": "string", "format": "uri" },
+        "rates": {
+          "type": "object",
+          "properties": {
+            "freight": { "type": "number" },
+            "fulfillment": { "type": "number" },
+            "serviceFee": { "type": "number" }
+          }
+        },
+        "nonEffectiveFactor": {
+          "type": "object",
+          "properties": {
+            "return": {
+              "type": "object",
+              "properties": {
+                "freightPercent": { "type": "number" },
+                "fulfillmentPercent": { "type": "number" },
+                "serviceFeePercent": { "type": "number" }
+              }
+            },
+            "cancelled": {
+              "type": "object",
+              "properties": {
+                "freightPercent": { "type": "number" },
+                "fulfillmentPercent": { "type": "number" },
+                "serviceFeePercent": { "type": "number" }
+              }
+            }
+          }
+        },
+        "status": { "type": "string", "enum": ["active", "inactive"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "InventoryItem": {
+      "title": "Inventory Item",
+      "description": "An item stored in the warehouse.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "sku": { "type": "string" },
+        "barcode": { "type": "string" },
+        "storeId": { "type": "string" },
+        "storeName": { "type": "string" },
+        "category": { "type": "string" },
+        "description": { "type": "string" },
+        "photos": { "type": "array", "items": { "type": "string", "format": "uri" } },
+        "declaredValue": { "type": "number" },
+        "stockAvailable": { "type": "number" },
+        "stockReserved": { "type": "number" },
+        "stockTotal": { "type": "number" },
+        "minStock": { "type": "number" },
+        "warehouseLocation": { "type": "string" },
+        "weight": { "type": "number" },
+        "dimensions": {
+          "type": "object",
+          "properties": {
+            "length": { "type": "number" },
+            "width": { "type": "number" },
+            "height": { "type": "number" }
+          }
+        },
+        "expirationDate": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["active", "inactive", "depleted"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "InventoryMovement": {
+      "title": "Inventory Movement",
+      "description": "A log of every stock change for an inventory item.",
+      "type": "object",
+      "properties": {
+        "itemId": { "type": "string" },
+        "itemName": { "type": "string" },
+        "itemSku": { "type": "string" },
+        "storeId": { "type": "string" },
+        "storeName": { "type": "string" },
+        "movementType": { "type": "string", "enum": ["order_reserve", "order_dispatch", "order_delivered", "order_cancelled", "order_returned", "manual_entry", "manual_exit", "adjustment", "shrinkage"] },
+        "referenceId": { "type": "string" },
+        "referenceType": { "type": "string", "enum": ["order", "entry", "exit", "adjustment"] },
+        "quantity": { "type": "number" },
+        "stockBefore": { "type": "number" },
+        "stockAfter": { "type": "number" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "InventoryTransaction": {
+      "title": "Inventory Transaction",
+      "description": "Record of a manual inventory operation like entry, exit, or adjustment.",
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["entry", "exit", "adjustment"] },
+        "storeId": { "type": "string" },
+        "storeName": { "type": "string" },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "itemId": { "type": "string" },
+              "itemName": { "type": "string" },
+              "itemSku": { "type": "string" },
+              "quantity": { "type": "number" },
+              "warehouseLocation": { "type": "string" },
+              "condition": { "type": "string", "enum": ["good", "damaged"] },
+              "notes": { "type": "string" }
+            }
+          }
+        },
+        "reason": { "type": "string" },
+        "referenceNumber": { "type": "string" },
+        "photos": { "type": "array", "items": { "type": "string", "format": "uri" } },
+        "processedBy": { "type": "string" },
+        "processedByName": { "type": "string" },
+        "authorizedBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Order": {
+      "title": "Order",
+      "description": "A delivery order.",
+      "type": "object",
+      "properties": {
+        "trackingId": { "type": "string" },
+        "storeId": { "type": "string" },
+        "storeName": { "type": "string" },
+        "serviceType": { "type": "string", "enum": ["logistics_360", "logistics_180", "fulfillment"] },
+        "status": { "type": "string" },
+        "previousStatus": { "type": "string" },
+        "paymentType": { "type": "string", "enum": ["cod", "prepaid"] },
+        "codAmount": { "type": "number" },
+        "collectedFromCourier": { "type": "boolean" },
+        "recipient": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "phone": { "type": "string" },
+            "city": { "type": "string" },
+            "sector": { "type": "string" },
+            "address": { "type": "string" }
+          }
+        },
+        "recipientId": { "type": "string" },
+        "products": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "itemId": { "type": "string" },
+              "name": { "type": "string" },
+              "sku": { "type": "string" },
+              "quantity": { "type": "number" },
+              "declaredValue": { "type": "number" }
+            }
+          }
+        },
+        "costs": {
+          "type": "object",
+          "properties": {
+            "freight": { "type": "number" },
+            "fulfillment": { "type": "number" },
+            "serviceFee": { "type": "number" },
+            "total": { "type": "number" },
+            "netToStore": { "type": "number" }
+          }
+        },
+        "courier": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "name": { "type": "string" }
+          }
+        },
+        "pickupAddress": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "address": { "type": "string" }
+          }
+        },
+        "thirdPartyCarrier": { "type": "string", "enum": ["chintra", "aurelpack"] },
+        "warehouse": {
+          "type": "object",
+          "properties": {
+            "packingStatus": { "type": "string", "enum": ["pending", "packed", "dispatched"] },
+            "mainLocation": { "type": "string" },
+            "subLocation": { "type": "string" }
+          }
+        },
+        "isDraft": { "type": "boolean" },
+        "draftTrackingId": { "type": "string" },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Client": {
+      "title": "Client",
+      "description": "Represents an end recipient of packages.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "addresses": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "city": { "type": "string" },
+              "sector": { "type": "string" },
+              "address": { "type": "string" }
+            }
+          }
+        },
+        "totalOrders": { "type": "number" },
+        "deliveredCount": { "type": "number" },
+        "returnedCount": { "type": "number" },
+        "cancelledCount": { "type": "number" },
+        "noveltyCount": { "type": "number" },
+        "successRate": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "OrderComment": {
+      "title": "Order Comment",
+      "description": "A comment on a delivery order.",
+      "type": "object",
+      "properties": {
+        "orderId": { "type": "string" },
+        "trackingId": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userRole": { "type": "string" },
+        "comment": { "type": "string" },
+        "photos": { "type": "array", "items": { "type": "string", "format": "uri" } },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "OrderNovelty": {
+      "title": "Order Novelty",
+      "description": "A record of a delivery issue or novelty.",
+      "type": "object",
+      "properties": {
+        "orderId": { "type": "string" },
+        "trackingId": { "type": "string" },
+        "reportedBy": { "type": "string" },
+        "reportedByName": { "type": "string" },
+        "photo": { "type": "string", "format": "uri" },
+        "comment": { "type": "string" },
+        "reportedAt": { "type": "string", "format": "date-time" },
+        "resolved": { "type": "boolean" },
+        "resolution": {
+          "type": "object",
+          "properties": {
+            "type": { "type": "string", "enum": ["reschedule", "cancel", "change_data"] },
+            "resolvedBy": { "type": "string" },
+            "resolvedByName": { "type": "string" },
+            "resolvedAt": { "type": "string", "format": "date-time" },
+            "comment": { "type": "string" },
+            "scheduledDate": { "type": "string", "format": "date-time" },
+            "updatedRecipient": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "phone": { "type": "string" },
+                "address": { "type": "string" },
+                "city": { "type": "string" },
+                "sector": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "OrderStatusHistory": {
+      "title": "Order Status History",
+      "description": "Log of status changes for an order.",
+      "type": "object",
+      "properties": {
+        "orderId": { "type": "string" },
+        "trackingId": { "type": "string" },
+        "previousStatus": { "type": "string" },
+        "newStatus": { "type": "string" },
+        "changedBy": { "type": "string" },
+        "changedByName": { "type": "string" },
+        "changedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "OrderLocationHistory": {
+      "title": "Order Location History",
+      "description": "Log of location changes for an order.",
+      "type": "object",
+      "properties": {
+        "orderId": { "type": "string" },
+        "trackingId": { "type": "string" },
+        "previousLocation": { "type": "string" },
+        "newLocation": { "type": "string" },
+        "previousSubLocation": { "type": "string" },
+        "newSubLocation": { "type": "string" },
+        "changedBy": { "type": "string" },
+        "changedByName": { "type": "string" },
+        "changedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "TrackingCounter": {
+      "title": "Tracking Counter",
+      "description": "A singleton document to generate sequential tracking IDs.",
+      "type": "object",
+      "properties": {
+        "lastNumber": { "type": "number" }
+      }
+    },
+    "UserProfile": {
+        "title": "User Profile",
+        "description": "Stores user profile information, including their role.",
+        "type": "object",
+        "properties": {
+            "uid": { "type": "string" },
+            "name": { "type": "string" },
+            "email": { "type": "string", "format": "email" },
+            "avatarUrl": { "type": "string", "format": "uri" },
+            "role": { "type": "string", "enum": ["admin", "operations", "client", "courier", "finance", "warehouse"] },
+            "storeId": { "type": "string" }
+        }
+    }
+  },
+  "auth": {
+    "providers": ["google.com", "password"]
+  },
+  "firestore": {
+    "/stores/{storeId}": {
+      "schema": { "$ref": "#/entities/Store" },
+      "description": "Collection of client stores."
+    },
+    "/inventory/{itemId}": {
+      "schema": { "$ref": "#/entities/InventoryItem" },
+      "description": "Collection of all inventory items."
+    },
+    "/inventoryMovements/{movementId}": {
+      "schema": { "$ref": "#/entities/InventoryMovement" },
+      "description": "Log of all stock movements."
+    },
+    "/inventoryTransactions/{transactionId}": {
+      "schema": { "$ref": "#/entities/InventoryTransaction" },
+      "description": "Collection of manual inventory transactions."
+    },
+    "/orders/{orderId}": {
+      "schema": { "$ref": "#/entities/Order" },
+      "description": "Collection of all delivery orders."
+    },
+    "/clients/{clientId}": {
+      "schema": { "$ref": "#/entities/Client" },
+      "description": "Collection of end recipients, identified by phone number."
+    },
+    "/orderComments/{commentId}": {
+      "schema": { "$ref": "#/entities/OrderComment" },
+      "description": "Comments associated with an order."
+    },
+    "/orderNovelties/{noveltyId}": {
+      "schema": { "$ref": "#/entities/OrderNovelty" },
+      "description": "Records of delivery novelties for an order."
+    },
+    "/orderStatusHistory/{historyId}": {
+      "schema": { "$ref": "#/entities/OrderStatusHistory" },
+      "description": "Log of status changes for an order."
+    },
+    "/orderLocationHistory/{historyId}": {
+      "schema": { "$ref": "#/entities/OrderLocationHistory" },
+      "description": "Log of location changes for an order."
+    },
+    "/trackingCounter/current": {
+      "schema": { "$ref": "#/entities/TrackingCounter" },
+      "description": "Singleton document for generating sequential tracking IDs."
+    },
+    "/users/{userId}": {
+        "schema": { "$ref": "#/entities/UserProfile" },
+        "description": "Stores user profile data and roles."
+    }
+  }
+}

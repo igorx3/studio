@@ -1,10 +1,12 @@
 export type UserRole = 'admin' | 'operations' | 'client' | 'courier' | 'finance' | 'warehouse';
 
 export interface User {
-  name: string;
-  email: string;
+  uid: string;
+  name: string | null;
+  email: string | null;
   role: UserRole;
-  avatarUrl: string;
+  avatarUrl: string | null;
+  storeId?: string; // For client role
 }
 
 export type OrderStatus =
@@ -41,8 +43,8 @@ export type OrderStatus =
   | 'Llamar'
   | 'Reprogramado';
 
-export type ServiceType = 'Logística 360°' | 'Logística 180°' | 'Fulfillment';
-export type ThirdPartyCourier = 'Chintra.com' | 'Aurelpack';
+export type ServiceType = 'logistics_360' | 'logistics_180' | 'fulfillment';
+export type ThirdPartyCourier = 'chintra' | 'aurelpack';
 export type Location = 'Alistamiento' | 'Despacho' | 'Recepción' | 'En Ruta' | 'Almacén';
 export type SubLocation = 'Q1' | 'Q2' | 'K1' | 'K2' | 'P1' | 'P2' | 'P3' | 'P4' | 'P5' | 'P6' | 'P7' | 'P8' | 'P9' | 'P10' | 'P11' | 'P12';
 
@@ -58,7 +60,7 @@ export interface Address {
 }
 
 export interface ProductLineItem {
-    id: string;
+    itemId: string;
     name: string;
     sku: string;
     quantity: number;
@@ -77,42 +79,78 @@ export interface OrderFinancials {
 
 export interface Order {
   id: string;
-  externalOrderReference?: string;
-  client: string; 
+  trackingId: string;
+  storeId: string;
+  storeName: string;
+  serviceType: ServiceType;
   status: OrderStatus;
-  recipientName: string;
-  recipientPhone: string;
-  createdAt: string; 
-  estadoDeEmpaque?: 'Pendiente' | 'Empacado' | 'Enviado';
-  assignedCourier?: string;
+  previousStatus?: OrderStatus;
+  paymentType: 'cod' | 'prepaid';
+  codAmount: number;
+  collectedFromCourier: boolean;
+  recipient: {
+    name: string;
+    phone: string;
+    city: string;
+    sector: string;
+    address: string;
+  };
+  recipientId: string; // Reference to clients collection
+  products: ProductLineItem[];
+  costs: {
+    freight: number;
+    fulfillment: number;
+    serviceFee: number;
+    total: number;
+    netToStore: number;
+  };
+  courier?: {
+    id: string;
+    name: string;
+  };
+  pickupAddress?: {
+    name: string;
+    address: string;
+  };
+  thirdPartyCarrier?: ThirdPartyCourier;
+  warehouse: {
+    packingStatus: 'pending' | 'packed' | 'dispatched';
+    mainLocation: Location;
+    subLocation: SubLocation;
+  };
+  isDraft: boolean;
+  draftTrackingId?: string;
+  createdBy: string; // userId
+  createdAt: any; // serverTimestamp
+  updatedAt: any; // serverTimestamp
+
+  // Legacy fields for mock data compatibility
+  externalOrderReference?: string;
+  client?: string;
+  recipientName?: string;
+  recipientPhone?: string;
+  estadoDeEmpaque?: string;
   assignedCourierName?: string;
-  deliveredAt?: string; 
-  deliveryAddress: Address;
-  paymentType?: 'COD' | 'Online';
+  deliveredAt?: string;
+  deliveryAddress?: Address;
   location?: Location;
   subLocation?: SubLocation;
   comments?: OrderComment[];
   history?: OrderEvent[];
-  // New fields from Part 2
-  serviceType: ServiceType;
-  products: ProductLineItem[];
-  financials: OrderFinancials;
-  pickupAddress?: Address;
-  thirdPartyCourier?: ThirdPartyCourier;
-  // Legacy fields
+  financials?: OrderFinancials;
   cashOnDeliveryAmount?: number;
-  collectedFromCourier?: boolean;
 }
 
 export interface OrderComment {
   id: string;
-  user: {
-    name:string;
-    avatarUrl?: string;
-  };
-  createdAt: string;
-  text: string;
-  photos?: string[];
+  orderId: string;
+  trackingId: string;
+  userId: string;
+  userName: string;
+  userRole: UserRole;
+  comment: string;
+  photos: string[];
+  createdAt: any; // serverTimestamp
 }
 
 export type OrderEventType = 'Status Change' | 'Location Change';
@@ -134,73 +172,99 @@ export interface OrderEvent {
 export interface Store {
     id: string;
     name: string;
-    freightCost: number;
-    fulfillmentCost: number;
-    serviceFee: number;
-    // Factor de no efectivo
-    nonDeliveryFactors: {
-        devolution: {
-            freight: number; // 0.5 for 50%
-            fulfillment: number;
-            serviceFee: number;
-        },
-        cancellation: {
-            freight: number;
-            fulfillment: number;
-            serviceFee: number;
-        }
-    }
+    contactName: string;
+    email: string;
+    phone: string;
+    address: string;
+    logo: string;
+    rates: {
+      freight: number;
+      fulfillment: number;
+      serviceFee: number;
+    };
+    nonEffectiveFactor: {
+      return: { freightPercent: number, fulfillmentPercent: number, serviceFeePercent: number },
+      cancelled: { freightPercent: number, fulfillmentPercent: number, serviceFeePercent: number }
+    };
+    status: 'active' | 'inactive';
+    createdAt: any; // serverTimestamp
+    updatedAt: any; // serverTimestamp
 }
 
-// From Part 5
-export type InventoryItemStatus = 'Activo' | 'Inactivo' | 'Agotado';
+export type InventoryItemStatus = 'active' | 'inactive' | 'depleted';
 
 export interface InventoryItem {
   id: string;
-  photoUrl: string;
   name: string;
   sku: string;
   barcode?: string;
+  storeId: string;
   storeName: string;
   category: string;
+  description?: string;
+  photos: string[];
+  declaredValue: number;
   stockAvailable: number;
   stockReserved: number;
   stockTotal: number;
-  declaredValue: number;
-  location: SubLocation;
+  minStock: number; // reorder point
+  warehouseLocation: SubLocation;
   weight: number; // in grams
   dimensions: {
     length: number; // in cm
     width: number;
     height: number;
   };
-  expirationDate?: string;
+  expirationDate?: any; // timestamp
   status: InventoryItemStatus;
-  createdAt: string;
-  reorderPoint: number;
+  createdAt: any; // serverTimestamp
+  updatedAt: any; // serverTimestamp
+
+  // for mock compatibility
+  photoUrl?: string;
 }
 
 export type InventoryMovementType = 
-  | 'Entrada de Mercancía'
-  | 'Reserva por Pedido'
-  | 'Liberación de Reserva'
-  | 'Salida por Despacho'
-  | 'Entrada por Devolución'
-  | 'Ajuste Manual (+)'
-  | 'Ajuste Manual (-)'
-  | 'Salida por Merma';
+  | 'order_reserve'
+  | 'order_dispatch'
+  | 'order_delivered'
+  | 'order_cancelled'
+  | 'order_returned'
+  | 'manual_entry'
+  | 'manual_exit'
+  | 'adjustment'
+  | 'shrinkage';
 
 export interface InventoryMovement {
   id: string;
-  timestamp: string;
-  productName: string;
-  productSku: string;
+  itemId: string;
+  itemName: string;
+  itemSku: string;
+  storeId: string;
   storeName: string;
-  type: InventoryMovementType;
-  reference?: string; // Order tracking ID or adjustment ID
-  quantityChange: number; // +N for entry, -N for exit
+  movementType: InventoryMovementType;
+  referenceId: string; // Order tracking ID or adjustment ID
+  referenceType: 'order' | 'entry' | 'exit' | 'adjustment';
+  quantity: number; // +N for entry, -N for exit
   stockBefore: number;
   stockAfter: number;
-  user: string; // User who performed the action
+  userId: string;
+  userName: string;
   notes?: string;
+  createdAt: any; // serverTimestamp
+}
+
+export interface Client {
+    id: string; // phone number
+    name: string;
+    phone: string;
+    addresses: { city: string, sector: string, address: string }[];
+    totalOrders: number;
+    deliveredCount: number;
+    returnedCount: number;
+    cancelledCount: number;
+    noveltyCount: number;
+    successRate: number;
+    createdAt: any; // serverTimestamp
+    updatedAt: any; // serverTimestamp
 }

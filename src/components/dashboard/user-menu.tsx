@@ -9,6 +9,14 @@ import { Skeleton } from '../ui/skeleton';
 export function UserMenu() {
   const { user, logout, isLoading } = useAuth();
 
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error("Error logging out", error);
+    }
+  }
+
   if (isLoading) {
     return <div className="flex items-center gap-2 p-2">
       <Skeleton className="h-10 w-10 rounded-full"/>
@@ -23,7 +31,8 @@ export function UserMenu() {
     return null;
   }
 
-  const getInitials = (name: string) => {
+  const getInitials = (name: string | null) => {
+    if (!name) return '??';
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
   
@@ -40,14 +49,14 @@ export function UserMenu() {
     <div className="p-2 border-t border-sidebar-border">
         <div className="flex items-center gap-3 p-2">
           <Avatar className="h-9 w-9">
-            <AvatarImage src={user.avatarUrl} alt={user.name} data-ai-hint="person portrait" />
+            {user.avatarUrl && <AvatarImage src={user.avatarUrl} alt={user.name ?? ''} data-ai-hint="person portrait" />}
             <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
           </Avatar>
           <div className="flex-1 group-data-[collapsible=icon]:hidden">
             <p className="text-sm font-medium">{user.name}</p>
             <p className="text-xs text-muted-foreground">{roleDisplay[user.role]}</p>
           </div>
-          <Button variant="ghost" size="icon" className="h-8 w-8 group-data-[collapsible=icon]:hidden" onClick={logout}>
+          <Button variant="ghost" size="icon" className="h-8 w-8 group-data-[collapsible=icon]:hidden" onClick={handleLogout}>
             <LogOut className="h-4 w-4"/>
           </Button>
         </div>
