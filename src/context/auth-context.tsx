@@ -2,10 +2,9 @@
 
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import type { User, UserRole } from '@/lib/types';
+import type { User } from '@/lib/types';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut, User as FirebaseUser } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { mockUsers } from '@/lib/data'; // for demo login roles
 import { FirebaseContext } from '@/firebase/context';
 
 interface AuthContextType {
@@ -15,7 +14,6 @@ interface AuthContextType {
   isLoading: boolean;
   loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
-  loginAsDemo: (role: UserRole) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -34,10 +32,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!auth || !firestore) {
       // Firebase is not ready yet, `isLoading` remains true.
-      // When firebaseContext provides auth and firestore, this effect will re-run.
-      if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
-        setIsLoading(false); // If no API key, stop loading and allow demo login.
-      }
       return;
     }
 
@@ -89,20 +83,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const loginAsDemo = (role: UserRole) => {
-    // This is a mock login for demo purposes.
-    const mockUser = mockUsers[role];
-    const userWithUid = { ...mockUser, uid: role }; // Use role as UID for mock
-    setUser(userWithUid as User);
-    setIsLoading(false);
-    router.push('/dashboard');
-  }
-
   const logout = async () => {
     if (auth) {
       await signOut(auth);
     }
-    // for demo login
     setUser(null); 
     router.push('/');
   };
@@ -122,7 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [isLoading, isAuthenticated, pathname, router]);
 
   return (
-    <AuthContext.Provider value={{ user, firebaseUser, isAuthenticated, isLoading, loginWithGoogle, logout, loginAsDemo }}>
+    <AuthContext.Provider value={{ user, firebaseUser, isAuthenticated, isLoading, loginWithGoogle, logout }}>
       {children}
     </AuthContext.Provider>
   );

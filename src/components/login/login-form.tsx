@@ -1,13 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useAuth } from '@/context/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import type { UserRole } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 
@@ -40,8 +38,7 @@ function GoogleIcon() {
   }
 
 export function LoginForm() {
-  const { loginWithGoogle, loginAsDemo, isLoading } = useAuth();
-  const [selectedRole, setSelectedRole] = useState<UserRole>('operations');
+  const { loginWithGoogle, isLoading } = useAuth();
   const { toast } = useToast();
 
   const handleGoogleLogin = async () => {
@@ -56,13 +53,6 @@ export function LoginForm() {
         });
     }
   }
-
-  const handleDemoLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (selectedRole) {
-      loginAsDemo(selectedRole);
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -85,32 +75,6 @@ export function LoginForm() {
             Continuar con Email
         </Button>
       </form>
-      
-      <div className="space-y-4 rounded-md border border-dashed p-4">
-        <p className="text-center text-sm text-muted-foreground">Para fines de demostración:</p>
-        <form onSubmit={handleDemoLogin} className="space-y-4">
-          <div>
-            <Label htmlFor="role-select">Iniciar sesión como</Label>
-            <Select onValueChange={(value) => setSelectedRole(value as UserRole)} defaultValue={selectedRole}>
-              <SelectTrigger id="role-select">
-                <SelectValue placeholder="Selecciona un rol" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="operations">Operaciones</SelectItem>
-                <SelectItem value="admin">Administrador</SelectItem>
-                <SelectItem value="client">Cliente</SelectItem>
-                <SelectItem value="courier">Mensajero</SelectItem>
-                <SelectItem value="finance">Finanzas</SelectItem>
-                <SelectItem value="warehouse">Almacén</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <Button type="submit" variant="secondary" className="w-full" disabled={isLoading}>
-            {isLoading && <Loader2 className="animate-spin" />}
-            Iniciar Sesión Demo
-          </Button>
-        </form>
-      </div>
     </div>
   );
 }
