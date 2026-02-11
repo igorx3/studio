@@ -22,14 +22,14 @@ export function FirebaseProvider({ children }: { children: ReactNode }) {
             appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
         };
         
-        if (firebaseConfig.apiKey && !auth) {
+        if (firebaseConfig.apiKey) {
             const appInstance = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
             setApp(appInstance);
             setAuth(getAuth(appInstance));
             setFirestore(getFirestore(appInstance));
             setStorage(getStorage(appInstance));
         }
-    }, [auth]);
+    }, []);
 
     const isInitializing = auth === undefined;
 
