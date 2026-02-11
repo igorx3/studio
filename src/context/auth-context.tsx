@@ -3,10 +3,10 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import type { User, UserRole } from '@/lib/types';
-import { auth, firestore } from '@/firebase/client';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut, User as FirebaseUser } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { mockUsers } from '@/lib/data'; // for demo login roles
+import { FirebaseContext } from '@/firebase/context';
 
 interface AuthContextType {
   user: User | null;
@@ -27,7 +27,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
+  const firebaseContext = useContext(FirebaseContext);
+  const auth = firebaseContext?.auth;
+  const firestore = firebaseContext?.firestore;
+
   useEffect(() => {
+    if (!auth || !firestore) {
+      // Firebase is not ready yet, `isLoading` remains true.
+      // When firebaseContext provides auth and firestore, this effect will re-run.
+      if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
+        setIsLoading(false); // If no API key, stop loading and allow demo login.
+      }
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       if (fbUser) {
         setFirebaseUser(fbUser);
@@ -57,9 +70,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [auth, firestore]);
 
   const loginWithGoogle = async () => {
+    if (!auth) {
+      console.error("Firebase Auth is not initialized.");
+      return;
+    };
     setIsLoading(true);
     const provider = new GoogleAuthProvider();
     try {
@@ -74,7 +91,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginAsDemo = (role: UserRole) => {
     // This is a mock login for demo purposes.
-    // It doesn't use real Firebase auth but simulates a logged-in user.
     const mockUser = mockUsers[role];
     const userWithUid = { ...mockUser, uid: role }; // Use role as UID for mock
     setUser(userWithUid as User);
@@ -83,7 +99,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = async () => {
-    await signOut(auth);
+    if (auth) {
+      await signOut(auth);
+    }
     // for demo login
     setUser(null); 
     router.push('/');
