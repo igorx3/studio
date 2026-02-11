@@ -19,12 +19,12 @@ type KanbanColumn = {
 
 const columns: KanbanColumn[] = [
     { id: 'Generado', label: 'Creados', statuses: ['Generado'] },
-    { id: 'ENVIADO', label: 'En Almacén', statuses: ['ENVIADO'] },
+    { id: 'Enviado', label: 'En Almacén', statuses: ['Enviado', 'ENVIADO'] },
     { id: 'Confirmado', label: 'Listos', statuses: ['Confirmado', 'Confirmado para la tarde', 'Coordinado', 'CONFIRMADO SIN STOCK'] },
     { id: 'En Ruta', label: 'En Ruta', statuses: ['En Ruta'] },
     { id: 'Entregado', label: 'Entregados', statuses: ['Entregado', 'ENTREGADO'] },
-    { id: 'Novedad', label: 'Fallidos', statuses: ['Novedad', 'NOVEDAD 2', 'Pendiente Respuesta', 'Sin respuestas', 'NO RECOGIDO', 'Llamar', 'Reprogramado'] },
-    { id: 'Devolución', label: 'Devueltos', statuses: ['Devolución', 'DEVUELTO A TIENDA', 'Devolucion'] },
+    { id: 'Novedad', label: 'Fallidos', statuses: ['Novedad', 'NOVEDAD 2', 'Pendiente Respuesta', 'Sin respuestas', 'NO RECOGIDO', 'Llamar', 'Reprogramado', 'No Contesta', 'Sin Cobertura'] },
+    { id: 'Devolucion', label: 'Devueltos', statuses: ['Devolución', 'DEVUELTO A TIENDA', 'Devolucion', 'Indemnización'] },
     { id: 'Cancelado', label: 'Cancelados', statuses: ['Cancelado', 'Anulado', 'CANCELADO'] },
 ];
 

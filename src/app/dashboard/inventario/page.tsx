@@ -2,26 +2,26 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 
-export default function TiendasPage() {
+export default function InventarioPage() {
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
             <div className="grid gap-2">
-                <CardTitle>Gestión de Tiendas</CardTitle>
+                <CardTitle>Gestión de Inventario</CardTitle>
                 <CardDescription>
-                Administra tus tiendas cliente, configura sus tarifas y reglas de negocio.
+                Administra los productos de tus tiendas almacenados en tu centro.
                 </CardDescription>
             </div>
             <Button>
                 <PlusCircle className="mr-2 h-4 w-4" />
-                Nueva Tienda
+                Nuevo Producto
             </Button>
         </div>
       </CardHeader>
       <CardContent>
         <div className="rounded-lg border p-8 text-center">
-            <p className="text-muted-foreground">La lista de tiendas y sus configuraciones se mostrarán aquí.</p>
+            <p className="text-muted-foreground">La lista de productos en inventario se mostrará aquí.</p>
         </div>
       </CardContent>
     </Card>

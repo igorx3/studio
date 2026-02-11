@@ -39,7 +39,8 @@ import {
   Contact,
   Briefcase,
   ChevronDown,
-  Database
+  Database,
+  LayoutGrid
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
@@ -59,6 +60,7 @@ const adminNavItems = [
     { href: '/dashboard/clientes', label: 'Tiendas', icon: Contact, roles: ['admin', 'operations'] },
     { href: '/dashboard/destinatarios', label: 'Destinatarios', icon: Users, roles: ['admin', 'operations'] },
     { href: '/dashboard/suplidores', label: 'Suplidores', icon: Building, roles: ['admin'] },
+    { href: '/dashboard/inventario', label: 'Inventario', icon: LayoutGrid, roles: ['admin', 'operations'] },
     { href: '/dashboard/base-de-datos', label: 'Base de Datos', icon: Database, roles: ['admin'] },
     { href: '/dashboard/ingresos', label: 'Ingresos', icon: TrendingUp, roles: ['admin', 'finance'] },
     { href: '/dashboard/gastos', label: 'Gastos', icon: TrendingDown, roles: ['admin', 'finance'] },

@@ -11,51 +11,42 @@ export type OrderStatus =
   | 'Generado'
   | 'Confirmado'
   | 'Confirmado para la tarde'
-  | 'Coordinado'
-  | 'En Ruta'
-  | 'Entregado'
-  | 'Novedad'
   | 'Pendiente Respuesta'
-  | 'Llamar'
-  | 'Reprogramado'
+  | 'Novedad'
+  | 'Entregado'
+  | 'En Ruta'
+  | 'Enviado'
   | 'Cancelado'
-  | 'Anulado'
-  | 'Indemnización'
   | 'Devolución'
+  | 'No Contesta'
+  | 'Sin Cobertura'
+  | 'Indemnización'
+  | 'Anulado'
   // Legacy/variant statuses from Kanban definition
-  | 'ENVIADO' // -> En Almacén
+  | 'ENVIADO' 
   | 'CONFIRMADO SIN STOCK'
-  | 'ENTREGADO' // variant of Entregado
+  | 'ENTREGADO' 
   | 'NOVEDAD 2'
   | 'Sin respuestas'
   | 'NO RECOGIDO'
   | 'DEVUELTO A TIENDA'
-  | 'Devolucion' // variant of Devolución
-  | 'CANCELADO' // variant of Cancelado
+  | 'Devolucion' 
+  | 'CANCELADO'
   // from old types that might still be used
   | 'Pendiente'
   | 'En almacén'
   | 'En tránsito'
-  | 'Nuevo';
+  | 'Nuevo'
+  | 'Coordinado'
+  | 'Llamar'
+  | 'Reprogramado';
 
+export type ServiceType = 'Logística 360°' | 'Logística 180°' | 'Fulfillment';
+export type ThirdPartyCourier = 'Chintra.com' | 'Aurelpack';
 export type Location = 'Alistamiento' | 'Despacho' | 'Recepción' | 'En Ruta' | 'Almacén';
 export type SubLocation = 'Q1' | 'Q2' | 'K1' | 'K2' | 'P1' | 'P2' | 'P3' | 'P4' | 'P5' | 'P6' | 'P7' | 'P8' | 'P9' | 'P10' | 'P11' | 'P12';
 
-export interface Order {
-  id: string;
-  externalOrderReference?: string;
-  client: string; // The store
-  status: OrderStatus;
-  recipientName: string;
-  recipientPhone: string;
-  cashOnDeliveryAmount?: number;
-  createdAt: string; // ISO string or parsable format
-  estadoDeEmpaque?: 'Pendiente' | 'Empacado' | 'Enviado';
-  assignedCourier?: string;
-  assignedCourierName?: string;
-  collectedFromCourier?: boolean;
-  deliveredAt?: string; // ISO string
-  deliveryAddress: {
+export interface Address {
     id: string;
     city: string;
     sector: string;
@@ -63,12 +54,54 @@ export interface Order {
     addressLine1: string;
     reference?: string;
     googleMapsUrl?: string;
-  };
+    name?: string;
+}
+
+export interface ProductLineItem {
+    id: string;
+    name: string;
+    sku: string;
+    quantity: number;
+    declaredValue: number;
+}
+
+export interface OrderFinancials {
+    codAmount: number;
+    collectedFromCourier: boolean;
+    freightCost: number;
+    fulfillmentCost: number;
+    serviceFee: number;
+    totalCost: number;
+    netToLiquidate: number;
+}
+
+export interface Order {
+  id: string;
+  externalOrderReference?: string;
+  client: string; 
+  status: OrderStatus;
+  recipientName: string;
+  recipientPhone: string;
+  createdAt: string; 
+  estadoDeEmpaque?: 'Pendiente' | 'Empacado' | 'Enviado';
+  assignedCourier?: string;
+  assignedCourierName?: string;
+  deliveredAt?: string; 
+  deliveryAddress: Address;
   paymentType?: 'COD' | 'Online';
   location?: Location;
   subLocation?: SubLocation;
   comments?: OrderComment[];
   history?: OrderEvent[];
+  // New fields from Part 2
+  serviceType: ServiceType;
+  products: ProductLineItem[];
+  financials: OrderFinancials;
+  pickupAddress?: Address;
+  thirdPartyCourier?: ThirdPartyCourier;
+  // Legacy fields
+  cashOnDeliveryAmount?: number;
+  collectedFromCourier?: boolean;
 }
 
 export interface OrderComment {
@@ -95,4 +128,25 @@ export interface OrderEvent {
   to?: string;
   comment?: string;
   subLocation?: SubLocation;
+}
+
+export interface Store {
+    id: string;
+    name: string;
+    freightCost: number;
+    fulfillmentCost: number;
+    serviceFee: number;
+    // Factor de no efectivo
+    nonDeliveryFactors: {
+        devolution: {
+            freight: number; // 0.5 for 50%
+            fulfillment: number;
+            serviceFee: number;
+        },
+        cancellation: {
+            freight: number;
+            fulfillment: number;
+            serviceFee: number;
+        }
+    }
 }
