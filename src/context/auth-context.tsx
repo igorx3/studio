@@ -25,11 +25,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  const firebaseContext = useContext(FirebaseContext);
-  const auth = firebaseContext?.auth;
-  const firestore = firebaseContext?.firestore;
+  const { auth, firestore, isInitializing } = useContext(FirebaseContext);
 
   useEffect(() => {
+    if (isInitializing) {
+        return; // Wait for Firebase to initialize
+    }
+
     if (auth && firestore) {
       const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
         if (fbUser) {
@@ -60,13 +62,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       return () => unsubscribe();
     } else {
-      // If firebase is not available, we assume no user is logged in and stop loading.
-      // This prevents the infinite loading screen.
+      // Firebase is not available
       setIsLoading(false);
       setUser(null);
       setFirebaseUser(null);
     }
-  }, [auth, firestore]);
+  }, [isInitializing, auth, firestore]);
 
   const loginWithGoogle = async () => {
     if (!auth) {

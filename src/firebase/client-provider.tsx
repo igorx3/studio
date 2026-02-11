@@ -11,6 +11,7 @@ export function FirebaseProvider({ children }: { children: ReactNode }) {
     const [auth, setAuth] = useState<Auth | undefined>(undefined);
     const [firestore, setFirestore] = useState<Firestore | undefined>(undefined);
     const [storage, setStorage] = useState<FirebaseStorage | undefined>(undefined);
+    const [isInitializing, setIsInitializing] = useState(true);
 
     useEffect(() => {
         const firebaseConfig = {
@@ -29,10 +30,11 @@ export function FirebaseProvider({ children }: { children: ReactNode }) {
             setFirestore(getFirestore(appInstance));
             setStorage(getStorage(appInstance));
         }
+        setIsInitializing(false);
     }, []);
 
     return (
-        <FirebaseContext.Provider value={{ app, auth, firestore, storage }}>
+        <FirebaseContext.Provider value={{ app, auth, firestore, storage, isInitializing }}>
         {children}
         </FirebaseContext.Provider>
     );

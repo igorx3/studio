@@ -11,4 +11,11 @@ export const FirebaseContext = createContext<{
   auth: Auth | undefined;
   firestore: Firestore | undefined;
   storage: FirebaseStorage | undefined;
-} | null>(null);
+  isInitializing: boolean;
+}>({
+  app: undefined,
+  auth: undefined,
+  firestore: undefined,
+  storage: undefined,
+  isInitializing: true,
+});
