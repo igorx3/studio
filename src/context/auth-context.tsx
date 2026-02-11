@@ -6,6 +6,7 @@ import type { User } from '@/lib/types';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut, User as FirebaseUser } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { FirebaseContext } from '@/firebase/context';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface AuthContextType {
   user: User | null;
@@ -29,7 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (isInitializing) {
-        return; // Wait for Firebase to initialize
+      return; // Wait for Firebase to be ready
     }
 
     if (auth && firestore) {
@@ -62,7 +63,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       return () => unsubscribe();
     } else {
-      // Firebase is not available
+      // Firebase is not available, but initialization is finished.
+      console.warn("Auth provider: Firebase services not available.");
       setIsLoading(false);
       setUser(null);
       setFirebaseUser(null);
@@ -107,6 +109,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
   }, [isLoading, isAuthenticated, pathname, router]);
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <div className="flex items-center space-x-4">
+          <Skeleton className="h-12 w-12 rounded-full" />
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-[250px]" />
+            <Skeleton className="h-4 w-[200px]" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
 
   return (
     <AuthContext.Provider value={{ user, firebaseUser, isAuthenticated, isLoading, loginWithGoogle, logout }}>

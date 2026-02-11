@@ -1,16 +1,21 @@
 'use client';
 import React, { ReactNode, useEffect, useState } from "react";
-import { initializeApp, getApp, getApps, FirebaseApp } from 'firebase/app';
-import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
-import { getStorage, FirebaseStorage } from "firebase/storage";
+import { initializeApp, getApp, getApps, type FirebaseApp } from 'firebase/app';
+import { getAuth, type Auth } from 'firebase/auth';
+import { getFirestore, type Firestore } from 'firebase/firestore';
+import { getStorage, type FirebaseStorage } from "firebase/storage";
 import { FirebaseContext } from "./context";
 
+interface FirebaseServices {
+    app?: FirebaseApp;
+    auth?: Auth;
+    firestore?: Firestore;
+    storage?: FirebaseStorage;
+    isInitializing: boolean;
+}
+
 export function FirebaseProvider({ children }: { children: ReactNode }) {
-    const [app, setApp] = useState<FirebaseApp | undefined>(undefined);
-    const [auth, setAuth] = useState<Auth | undefined>(undefined);
-    const [firestore, setFirestore] = useState<Firestore | undefined>(undefined);
-    const [storage, setStorage] = useState<FirebaseStorage | undefined>(undefined);
+    const [services, setServices] = useState<FirebaseServices>({ isInitializing: true });
     
     useEffect(() => {
         const firebaseConfig = {
@@ -24,18 +29,22 @@ export function FirebaseProvider({ children }: { children: ReactNode }) {
         
         if (firebaseConfig.apiKey) {
             const appInstance = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-            setApp(appInstance);
-            setAuth(getAuth(appInstance));
-            setFirestore(getFirestore(appInstance));
-            setStorage(getStorage(appInstance));
+            setServices({
+                app: appInstance,
+                auth: getAuth(appInstance),
+                firestore: getFirestore(appInstance),
+                storage: getStorage(appInstance),
+                isInitializing: false,
+            });
+        } else {
+            console.error("Firebase config is missing.");
+            setServices({ isInitializing: false });
         }
     }, []);
 
-    const isInitializing = auth === undefined;
-
     return (
-        <FirebaseContext.Provider value={{ app, auth, firestore, storage, isInitializing }}>
-        {children}
+        <FirebaseContext.Provider value={services}>
+            {children}
         </FirebaseContext.Provider>
     );
 }
