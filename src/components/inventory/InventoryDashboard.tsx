@@ -2,7 +2,7 @@
 import React, { useMemo } from 'react';
 import type { InventoryItem } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, Archive, AlertTriangle, Clock, Sigma, Ban } from "lucide-react";
+import { Package, Archive, AlertTriangle, Sigma, Ban } from "lucide-react";
 import { Timestamp } from 'firebase/firestore';
 
 interface InventoryDashboardProps {
@@ -20,33 +20,16 @@ export function InventoryDashboard({ items }: InventoryDashboardProps) {
             lowStockItems: 0,
             criticalStockItems: 0,
             outOfStockItems: 0,
-            expiringSoonItems: 0,
         };
     }
 
-    const totalValue = items.reduce((sum, item) => sum + (item.declaredValue * item.stockTotal), 0);
+    const totalValue = items.reduce((sum, item) => sum + (item.normalPrice * item.stockTotal), 0);
     const totalSkus = items.length;
     const totalUnits = items.reduce((sum, item) => sum + item.stockTotal, 0);
     
     const lowStockItems = items.filter(item => item.stockAvailable < item.idealStock && item.stockAvailable > item.minStock).length;
     const criticalStockItems = items.filter(item => item.stockAvailable <= item.minStock && item.stockAvailable > 0).length;
     const outOfStockItems = items.filter(item => item.stockAvailable === 0).length;
-    
-    const thirtyDaysFromNow = new Date();
-    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
-
-    const expiringSoonItems = items.filter(item => {
-        if (!item.expirationDate) return false;
-        let expiration;
-        if (item.expirationDate instanceof Timestamp) {
-            expiration = item.expirationDate.toDate();
-        } else if (typeof item.expirationDate === 'string') {
-            expiration = new Date(item.expirationDate);
-        } else {
-            return false;
-        }
-        return expiration <= thirtyDaysFromNow;
-    }).length;
 
     return {
       totalValue,
@@ -55,7 +38,6 @@ export function InventoryDashboard({ items }: InventoryDashboardProps) {
       lowStockItems,
       criticalStockItems,
       outOfStockItems,
-      expiringSoonItems,
     };
   }, [items]);
 

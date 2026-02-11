@@ -1,3 +1,5 @@
+import { Timestamp } from 'firebase/firestore';
+
 export type UserRole = 'admin' | 'operations' | 'client' | 'courier' | 'finance' | 'warehouse';
 
 export interface User {
@@ -64,7 +66,7 @@ export interface ProductLineItem {
     name: string;
     sku: string;
     quantity: number;
-    declaredValue: number;
+    price: number;
 }
 
 export interface OrderFinancials {
@@ -125,8 +127,6 @@ export interface Order {
   thirdPartyCarrier?: ThirdPartyCourier;
   warehouse: {
     packingStatus: 'pending' | 'packed' | 'dispatched';
-    mainLocation: string; // DEPRECATED, use packageLocation in InventoryItem
-    subLocation: string; // DEPRECATED, use warehouseSubLocation in InventoryItem
   };
   isDraft: boolean;
   draftTrackingId?: string;
@@ -233,15 +233,21 @@ export interface InventoryItem {
   category: string;
   description?: string;
   photos: string[];
-  declaredValue: number;
+  
+  cost?: number; // Admin only, populated from private subcollection
+  minSalePrice: number;
+  normalPrice: number;
+
   initialStock: number;
   stockAvailable: number;
   stockReserved: number;
   stockTotal: number;
   minStock: number;
   idealStock: number;
+
   packageLocation?: PackageLocation;
   warehouseSubLocation?: WarehouseSubLocation;
+  
   weight: number; // in grams
   dimensions: {
     length: number; // in cm
@@ -276,7 +282,7 @@ export interface InventoryMovement {
   storeName: string;
   movementType: InventoryMovementType;
   referenceId: string; // Order tracking ID or adjustment ID
-  referenceType: 'order' | 'entry' | 'exit' | 'adjustment' | 'item_creation' | 'initial_stock';
+  referenceType: 'order' | 'entry' | 'exit' | 'adjustment' | 'item_creation';
   quantity: number; // +N for entry, -N for exit
   stockBefore: number;
   stockAfter: number;

@@ -48,14 +48,24 @@ import {
 import { Button } from '../ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 
-const operationsNavItems = [
-  { href: '/dashboard', label: 'Tablero', icon: LayoutDashboard, roles: ['admin', 'operations', 'finance', 'client', 'courier', 'warehouse'] },
+const mainNavItems = [
+  { href: '/dashboard', label: 'Tablero', icon: LayoutDashboard, roles: ['admin', 'operations', 'finance', 'client', 'warehouse'] },
   { href: '/dashboard/pedidos', label: 'Pedidos', icon: Package, roles: ['admin', 'operations', 'client'] },
-  { href: '/dashboard/dropshipping', label: 'Catálogo Dropshipping', icon: ShoppingBag, roles: ['client'] },
   { href: '/dashboard/asignados', label: 'Asignados', icon: ClipboardCheck, roles: ['admin', 'operations'] },
   { href: '/dashboard/pistoleo-masivo', label: 'Pistoleo Masivo', icon: ScanLine, roles: ['admin', 'warehouse'] },
-  { href: '/dashboard/ubicacion', label: 'Ubicación', icon: MapPin, roles: ['admin', 'operations'] },
+  { href: '/dashboard/ubicacion', label: 'Ubicación', icon: MapPin, roles: ['admin', 'operations', 'client'] },
   { href: '/dashboard/rutas', label: 'Rutas', icon: Map, roles: ['admin', 'operations'] },
+  { href: '/dashboard/inventario', label: 'Inventario', icon: LayoutGrid, roles: ['admin', 'operations', 'client'] },
+  { href: '/dashboard/dropshipping', label: 'Catálogo Dropshipping', icon: ShoppingBag, roles: ['client'] },
+  { href: '/dashboard/dropshipping-management', label: 'Gestión Dropshipping', icon: Briefcase, roles: ['admin', 'operations'] },
+];
+
+const financeNavItems = [
+    { href: '/dashboard/ingresos', label: 'Ingresos', icon: TrendingUp, roles: ['admin', 'finance'] },
+    { href: '/dashboard/gastos', label: 'Gastos', icon: TrendingDown, roles: ['admin', 'finance'] },
+    { href: '/dashboard/cuentas-por-pagar', label: 'Cuentas por Pagar', icon: ArrowDownCircle, roles: ['admin', 'finance'] },
+    { href: '/dashboard/cuentas-por-cobrar', label: 'Cuentas por Cobrar', icon: ArrowUpCircle, roles: ['admin', 'finance'] },
+    { href: '/dashboard/reportes-financieros', label: 'Reportes Financieros', icon: FileText, roles: ['admin', 'finance'] },
 ];
 
 const adminNavItems = [
@@ -64,38 +74,25 @@ const adminNavItems = [
     { href: '/dashboard/tiendas', label: 'Tiendas', icon: Contact, roles: ['admin', 'operations'] },
     { href: '/dashboard/destinatarios', label: 'Destinatarios', icon: Users, roles: ['admin', 'operations'] },
     { href: '/dashboard/suplidores', label: 'Suplidores', icon: Building, roles: ['admin'] },
-    { href: '/dashboard/inventario', label: 'Inventario', icon: LayoutGrid, roles: ['admin', 'operations', 'client'] },
-    { href: '/dashboard/dropshipping-management', label: 'Gestión Dropshipping', icon: Briefcase, roles: ['admin', 'operations'] },
-    { href: '/dashboard/base-de-datos', label: 'Base de Datos', icon: Database, roles: ['admin'] },
-    { href: '/dashboard/ingresos', label: 'Ingresos', icon: TrendingUp, roles: ['admin', 'finance'] },
-    { href: '/dashboard/gastos', label: 'Gastos', icon: TrendingDown, roles: ['admin', 'finance'] },
-    { href: '/dashboard/cuentas-por-pagar', label: 'Cuentas por Pagar', icon: ArrowDownCircle, roles: ['admin', 'finance'] },
-    { href: '/dashboard/cuentas-por-cobrar', label: 'Cuentas por Cobrar', icon: ArrowUpCircle, roles: ['admin', 'finance'] },
-    { href: '/dashboard/reportes-financieros', label: 'Reportes Financieros', icon: FileText, roles: ['admin', 'finance'] },
     { href: '/dashboard/usuarios', label: 'Usuarios', icon: Users, roles: ['admin'] },
+    { href: '/dashboard/base-de-datos', label: 'Base de Datos', icon: Database, roles: ['admin'] },
 ];
-
-const mainNavItems = [
-  { href: '/dashboard/finanzas', label: 'Finanzas', icon: DollarSign, roles: ['admin', 'finance'] },
-  { href: '/dashboard/almacen', label: 'Almacén', icon: Warehouse, roles: ['admin', 'warehouse'] },
-];
-
 
 export function DashboardSidebar() {
   const { user } = useAuth();
   const pathname = usePathname();
   const [isAdminOpen, setIsAdminOpen] = React.useState(false);
+  const [isFinanceOpen, setIsFinanceOpen] = React.useState(false);
 
   if (!user) return null;
 
   const userCanSee = (roles: string[]) => {
     return user && roles.includes(user.role);
   };
-
-  const isOperationsSectionVisible = operationsNavItems.some(item => userCanSee(item.roles));
-  const isAdministrationSectionVisible = adminNavItems.some(item => userCanSee(item.roles));
+  
   const isMainSectionVisible = mainNavItems.some(item => userCanSee(item.roles));
-
+  const isFinanceSectionVisible = financeNavItems.some(item => userCanSee(item.roles));
+  const isAdministrationSectionVisible = adminNavItems.some(item => userCanSee(item.roles));
 
   return (
     <Sidebar collapsible="icon">
@@ -133,7 +130,7 @@ export function DashboardSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarMenu>
-          {isOperationsSectionVisible && operationsNavItems.filter(item => userCanSee(item.roles)).map(item => (
+          {isMainSectionVisible && mainNavItems.filter(item => userCanSee(item.roles)).map(item => (
             <SidebarMenuItem key={item.href}>
               <Link href={item.href} passHref>
                 <SidebarMenuButton 
@@ -149,6 +146,37 @@ export function DashboardSidebar() {
             </SidebarMenuItem>
           ))}
           
+          {isFinanceSectionVisible && (
+              <Collapsible open={isFinanceOpen} onOpenChange={setIsFinanceOpen} className="w-full">
+                <CollapsibleTrigger asChild className="group-data-[collapsible=icon]:hidden">
+                     <Button variant="ghost" className="w-full justify-start gap-2 p-2">
+                        <DollarSign /> 
+                        <span>Finanzas</span>
+                        <ChevronDown className={`h-4 w-4 ml-auto transition-transform ${isFinanceOpen ? 'rotate-180' : ''}`} />
+                    </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                    <SidebarMenu className="pl-6">
+                    {financeNavItems.filter(item => userCanSee(item.roles)).map(item => (
+                        <SidebarMenuItem key={item.href}>
+                        <Link href={item.href} passHref>
+                            <SidebarMenuButton 
+                            isActive={pathname === item.href}
+                            tooltip={item.label}
+                            variant="ghost"
+                            size="sm"
+                            >
+                            <item.icon />
+                            <span>{item.label}</span>
+                            </SidebarMenuButton>
+                        </Link>
+                        </SidebarMenuItem>
+                    ))}
+                    </SidebarMenu>
+                </CollapsibleContent>
+              </Collapsible>
+          )}
+
           {isAdministrationSectionVisible && (
               <Collapsible open={isAdminOpen} onOpenChange={setIsAdminOpen} className="w-full">
                 <CollapsibleTrigger asChild className="group-data-[collapsible=icon]:hidden">
@@ -180,20 +208,6 @@ export function DashboardSidebar() {
               </Collapsible>
           )}
 
-          {isMainSectionVisible && mainNavItems.filter(item => userCanSee(item.roles)).map(item => (
-            <SidebarMenuItem key={item.href}>
-              <Link href={item.href} passHref>
-                <SidebarMenuButton 
-                  isActive={pathname === item.href}
-                  tooltip={item.label}
-                  variant="ghost"
-                >
-                  <item.icon />
-                  <span>{item.label}</span>
-                </SidebarMenuButton>
-              </Link>
-            </SidebarMenuItem>
-          ))}
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter>

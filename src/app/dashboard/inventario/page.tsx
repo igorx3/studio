@@ -20,34 +20,35 @@ import type { InventoryItem, Store } from '@/lib/types';
 
 export default function InventarioPage() {
   const { user } = useAuth();
-  const { firestore, isInitializing } = useContext(FirebaseContext);
+  const { firestore } = useContext(FirebaseContext);
   
-  const [items, setItems] = useState<InventoryItem[]>([]);
+  const [items, setItems] = useState<InventoryItem[] | null>(null);
   const [stores, setStores] = useState<Store[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingStores, setIsLoadingStores] = useState(true);
 
   const isClient = user?.role === 'client';
   const isAdmin = user?.role === 'admin' || user?.role === 'operations';
 
   // Fetch Stores
   useEffect(() => {
-    if (!firestore || isInitializing) return;
+    if (!firestore) return;
+    setIsLoadingStores(true);
     const storesQuery = query(collection(firestore, 'stores'));
     const unsubscribe = onSnapshot(storesQuery, (snapshot) => {
       const storesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Store));
       setStores(storesData);
+      setIsLoadingStores(false);
     }, (error) => {
         console.error("Error fetching stores: ", error);
+        setIsLoadingStores(false);
     });
     return () => unsubscribe();
-  }, [firestore, isInitializing]);
+  }, [firestore]);
 
   // Fetch Inventory Items
   useEffect(() => {
-    if (!firestore || isInitializing) {
-        setIsLoading(true);
-        return;
-    };
+    if (!firestore) return;
+    setItems(null);
     
     let itemsQuery;
     if (isClient && user?.storeId) {
@@ -59,13 +60,12 @@ export default function InventarioPage() {
     const unsubscribe = onSnapshot(itemsQuery, (snapshot) => {
       const itemsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InventoryItem));
       setItems(itemsData);
-      setIsLoading(false);
     }, (error) => {
       console.error("Error fetching inventory items:", error);
-      setIsLoading(false);
+      setItems([]);
     });
     return () => unsubscribe();
-  }, [firestore, isInitializing, isClient, user?.storeId]);
+  }, [firestore, isClient, user?.storeId]);
 
 
   return (
@@ -79,7 +79,7 @@ export default function InventarioPage() {
           </div>
       </div>
       
-      {isLoading ? (
+      {items === null ? (
         <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
             {[...Array(6)].map((_, i) => <Card key={i}><CardHeader className="h-24 animate-pulse bg-muted/50 rounded-lg"></CardHeader></Card>)}
         </div>
@@ -94,7 +94,7 @@ export default function InventarioPage() {
           {isAdmin && <TabsTrigger value="adjustments"><Settings2 className="mr-2 h-4 w-4" /> Entradas, Salidas y Ajustes</TabsTrigger>}
           {isAdmin && <TabsTrigger value="categories"><Tags className="mr-2 h-4 w-4" /> Categorías</TabsTrigger>}
         </TabsList>
-        {isLoading && !isInitializing ? (
+        {(items === null || isLoadingStores) ? (
             <div className="flex items-center justify-center p-16">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>

@@ -97,7 +97,7 @@ export function ArticlesView({ items, stores }: ArticlesViewProps) {
                                 {user?.role !== 'client' && <TableHead>Tienda</TableHead>}
                                 <TableHead>Stock</TableHead>
                                 <TableHead>Reservado</TableHead>
-                                <TableHead>Valor</TableHead>
+                                <TableHead>Tarifa Normal</TableHead>
                                 {isAdmin && <TableHead>Sub-Ubicación</TableHead>}
                                 <TableHead>Estado</TableHead>
                             </TableRow>
@@ -122,7 +122,7 @@ export function ArticlesView({ items, stores }: ArticlesViewProps) {
                                         {user?.role !== 'client' && <TableCell>{item.storeName}</TableCell>}
                                         <TableCell className={cn("font-bold", status.textClass)}>{item.stockAvailable}</TableCell>
                                         <TableCell>{item.stockReserved}</TableCell>
-                                        <TableCell>${item.declaredValue.toLocaleString()}</TableCell>
+                                        <TableCell>${item.normalPrice.toLocaleString()}</TableCell>
                                         {isAdmin && <TableCell>{item.warehouseSubLocation}</TableCell>}
                                         <TableCell>
                                             <Badge variant={status.badgeVariant}>{status.label}</Badge>
