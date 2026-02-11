@@ -1,12 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { collection, onSnapshot, query, where, Query } from 'firebase/firestore';
+import { useState, useMemo } from 'react';
 import { useAuth } from "@/context/auth-context";
-import { FirebaseContext } from '@/firebase/context';
 import React from 'react';
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardHeader } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Package, Truck, Settings2, Loader2 } from "lucide-react";
 import { InventoryDashboard } from "@/components/inventory/InventoryDashboard";
@@ -14,51 +12,24 @@ import { ArticlesView } from "@/components/inventory/ArticlesView";
 import { MovementsView } from "@/components/inventory/MovementsView";
 import { AdjustmentsView } from "@/components/inventory/AdjustmentsView";
 import type { InventoryItem, Store } from '@/lib/types';
+import { mockInventoryItems, mockStores } from '@/lib/data';
 
 
 export default function InventarioPage() {
   const { user } = useAuth();
-  const firebaseContext = React.useContext(FirebaseContext);
-  const firestore = firebaseContext?.firestore;
-
-  const [items, setItems] = useState<InventoryItem[]>([]);
-  const [stores, setStores] = useState<Store[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  
+  const [items, setItems] = useState<InventoryItem[]>(mockInventoryItems);
+  const [stores, setStores] = useState<Store[]>(mockStores);
+  const [isLoading, setIsLoading] = useState(false);
 
   const isClient = user?.role === 'client';
 
-  useEffect(() => {
-    if (!firestore) return;
-
-    // Listener for stores
-    const storesCollection = collection(firestore, 'stores');
-    const storesUnsubscribe = onSnapshot(storesCollection, (snapshot) => {
-      const storesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Store));
-      setStores(storesData);
-    });
-
-    // Listener for inventory items
-    let inventoryQuery: Query = collection(firestore, 'inventory');
-    // If the user is a client, only fetch their items
-    if (isClient && user.storeId) {
-      inventoryQuery = query(inventoryQuery, where('storeId', '==', user.storeId));
+  const clientItems = useMemo(() => {
+    if (isClient && user?.storeId) {
+      return items.filter(item => item.storeId === user.storeId);
     }
-    
-    const inventoryUnsubscribe = onSnapshot(inventoryQuery, (snapshot) => {
-      const itemsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InventoryItem));
-      setItems(itemsData);
-      setIsLoading(false);
-    }, (error) => {
-        console.error("Error fetching inventory items:", error);
-        setIsLoading(false);
-    });
-
-    // Cleanup listeners on unmount
-    return () => {
-      storesUnsubscribe();
-      inventoryUnsubscribe();
-    };
-  }, [firestore, isClient, user?.storeId]);
+    return items;
+  }, [items, isClient, user?.storeId]);
 
 
   return (
@@ -77,7 +48,7 @@ export default function InventarioPage() {
             {[...Array(6)].map((_, i) => <Card key={i}><CardHeader className="h-24"></CardHeader></Card>)}
         </div>
       ) : (
-        <InventoryDashboard items={items} />
+        <InventoryDashboard items={clientItems} />
       )}
       
       <Tabs defaultValue="articles" className="w-full">
@@ -93,7 +64,7 @@ export default function InventarioPage() {
         ) : (
             <>
                 <TabsContent value="articles" className="mt-4">
-                <ArticlesView items={items} stores={stores} />
+                <ArticlesView items={clientItems} stores={stores} />
                 </TabsContent>
                 <TabsContent value="movements" className="mt-4">
                 <MovementsView />

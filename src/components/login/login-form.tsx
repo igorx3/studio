@@ -3,78 +3,49 @@
 import React from 'react';
 import { useAuth } from '@/context/auth-context';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
-import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Shield, User, Building, Truck, Wallet, Warehouse } from 'lucide-react';
+import type { UserRole } from '@/lib/types';
 
-function GoogleIcon() {
-    return (
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 48 48"
-        width="24px"
-        height="24px"
-      >
-        <path
-          fill="#FFC107"
-          d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24s8.955,20,20,20s20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"
-        />
-        <path
-          fill="#FF3D00"
-          d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"
-        />
-        <path
-          fill="#4CAF50"
-          d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"
-        />
-        <path
-          fill="#1976D2"
-          d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.574l6.19,5.238C42.022,35.244,44,30.036,44,24C44,22.659,43.862,21.35,43.611,20.083z"
-        />
-      </svg>
-    );
-  }
+const roleButtons: { role: UserRole, label: string, icon: React.ElementType }[] = [
+    { role: 'admin', label: 'Admin', icon: Shield },
+    { role: 'operations', label: 'Operaciones', icon: User },
+    { role: 'client', label: 'Cliente', icon: Building },
+    { role: 'courier', label: 'Mensajero', icon: Truck },
+    { role: 'finance', label: 'Finanzas', icon: Wallet },
+    { role: 'warehouse', label: 'Almacén', icon: Warehouse },
+];
 
 export function LoginForm() {
-  const { loginWithGoogle, isLoading } = useAuth();
-  const { toast } = useToast();
-
-  const handleGoogleLogin = async () => {
-    try {
-        await loginWithGoogle();
-    } catch(error) {
-        console.error(error);
-        toast({
-            variant: "destructive",
-            title: "Error de inicio de sesión",
-            description: "No se pudo iniciar sesión con Google. Por favor, inténtalo de nuevo.",
-        });
-    }
-  }
-
+  const { loginAs, isLoading } = useAuth();
+  
   return (
-    <div className="space-y-6">
-       <Button variant="outline" className="w-full" onClick={handleGoogleLogin} disabled={isLoading}>
-            {isLoading ? <Loader2 className="animate-spin" /> : <GoogleIcon />}
-            <span>Continuar con Google</span>
-        </Button>
-      
-      <div className="relative">
-        <Separator className="absolute left-0 top-1/2 -translate-y-1/2 w-full" />
-        <span className="relative bg-card px-2 text-sm text-muted-foreground z-10 flex justify-center">O continuar con</span>
-      </div>
+    <div className="space-y-4">
+      <p className="text-sm text-center text-muted-foreground">
+        Selecciona un rol para iniciar sesión en el modo de demostración.
+      </p>
+      <div className="grid grid-cols-2 gap-4">
+        {roleButtons.map(({ role, label, icon: Icon }) => (
+             <Button 
+                key={role}
+                variant="outline" 
+                className="w-full justify-start text-left h-12" 
+                onClick={() => loginAs(role)} 
+                disabled={isLoading}
+            >
+                <Icon className="mr-3 h-5 w-5 text-muted-foreground" />
+                <div>
+                    <p className="font-semibold">{label}</p>
+                    <p className="text-xs text-muted-foreground -mt-1">{role}@khlothia.pack</p>
+                </div>
+            </Button>
+        ))}
 
-      <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
-        <div>
-          <Label htmlFor="email">Correo electrónico</Label>
-          <Input id="email" type="email" placeholder="tu@email.com" disabled />
-        </div>
-        <Button className="w-full bg-primary hover:bg-primary/90" disabled>
-            Continuar con Email
-        </Button>
-      </form>
+        {isLoading && (
+            <div className="col-span-2 flex items-center justify-center">
+                <Loader2 className="animate-spin text-primary" />
+            </div>
+        )}
+      </div>
     </div>
   );
 }

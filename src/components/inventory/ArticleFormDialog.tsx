@@ -13,9 +13,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Paperclip } from 'lucide-react';
 import type { InventoryItem, Store, User, SubLocation } from '@/lib/types';
-import { FirebaseContext } from '@/firebase/context';
-import { collection, addDoc, updateDoc, doc, serverTimestamp, getDocs, query, where } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useAuth } from '@/context/auth-context';
 import Image from 'next/image';
 
@@ -50,9 +47,6 @@ const formSchema = z.object({
 export function ArticleFormDialog({ isOpen, onOpenChange, article, stores }: ArticleFormDialogProps) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const firebaseContext = useContext(FirebaseContext);
-  const firestore = firebaseContext?.firestore;
-  const storage = firebaseContext?.storage;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
@@ -95,13 +89,30 @@ export function ArticleFormDialog({ isOpen, onOpenChange, article, stores }: Art
         length: article.dimensions?.length,
         width: article.dimensions?.width,
         height: article.dimensions?.height,
-        expirationDate: article.expirationDate ? new Date(article.expirationDate.seconds * 1000).toISOString().split('T')[0] : '',
+        expirationDate: article.expirationDate ? new Date(article.expirationDate).toISOString().split('T')[0] : '',
       });
       if (article.photos && article.photos.length > 0) {
         setPreviewImage(article.photos[0]);
       }
     } else {
-      form.reset();
+      form.reset({
+        name: '',
+        sku: '',
+        storeId: '',
+        declaredValue: 0,
+        stockAvailable: 0,
+        minStock: 10,
+        category: '',
+        description: '',
+        barcode: '',
+        warehouseLocation: undefined,
+        weight: 0,
+        length: 0,
+        width: 0,
+        height: 0,
+        expirationDate: '',
+        photo: undefined,
+      });
       setPreviewImage(null);
     }
   }, [article, form, isOpen]);
@@ -120,130 +131,19 @@ export function ArticleFormDialog({ isOpen, onOpenChange, article, stores }: Art
   };
   
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    if (!firestore || !storage || !user) {
-      toast({ variant: 'destructive', title: 'Error', description: 'La base de datos no está disponible.' });
-      return;
-    }
     setIsSubmitting(true);
+    console.log("Form Submitted (Demo):", values);
 
-    try {
-      // 1. SKU uniqueness check
-      const inventoryCollection = collection(firestore, 'inventory');
-      const q = query(inventoryCollection, where('storeId', '==', values.storeId), where('sku', '==', values.sku));
-      const skuSnapshot = await getDocs(q);
-      if (!skuSnapshot.empty && (!article || skuSnapshot.docs[0].id !== article.id)) {
-        toast({ variant: 'destructive', title: 'Error de SKU', description: 'Este SKU ya existe para la tienda seleccionada.' });
-        setIsSubmitting(false);
-        return;
-      }
-      
-      const storeName = stores.find(s => s.id === values.storeId)?.name || 'N/A';
-      const stockTotal = (article?.stockReserved || 0) + values.stockAvailable;
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
-      let photoUrl: string | undefined = article?.photos?.[0];
-
-      if (values.photo && values.photo instanceof File) {
-        const file: File = values.photo;
-        const fileRef = ref(storage, `inventory/${article?.id || 'new'}/${file.name}`);
-        const uploadResult = await uploadBytes(fileRef, file);
-        photoUrl = await getDownloadURL(uploadResult.ref);
-      }
-
-      const dataToSave = {
-          name: values.name,
-          sku: values.sku,
-          storeId: values.storeId,
-          storeName: storeName,
-          declaredValue: values.declaredValue,
-          stockAvailable: values.stockAvailable,
-          minStock: values.minStock,
-          stockTotal: stockTotal,
-          status: stockTotal > 0 ? 'active' : 'depleted',
-          category: values.category || '',
-          description: values.description || '',
-          barcode: values.barcode || '',
-          warehouseLocation: values.warehouseLocation,
-          weight: values.weight || 0,
-          dimensions: {
-              length: values.length || 0,
-              width: values.width || 0,
-              height: values.height || 0,
-          },
-          expirationDate: values.expirationDate ? new Date(values.expirationDate) : null,
-          photos: photoUrl ? [photoUrl] : [],
-          updatedAt: serverTimestamp(),
-      };
-
-
-      if (article) {
-        // Update existing article
-        const articleRef = doc(firestore, 'inventory', article.id);
-        
-        // Create 'adjustment' movement if stock changed manually
-        if (article.stockAvailable !== values.stockAvailable) {
-            const stockDifference = values.stockAvailable - article.stockAvailable;
-            await addDoc(collection(firestore, 'inventoryMovements'), {
-                itemId: article.id,
-                itemName: values.name,
-                itemSku: values.sku,
-                storeId: values.storeId,
-                storeName: storeName,
-                movementType: 'adjustment',
-                referenceId: article.id,
-                referenceType: 'adjustment',
-                quantity: stockDifference,
-                stockBefore: article.stockAvailable,
-                stockAfter: values.stockAvailable,
-                userId: user.uid,
-                userName: user.name || 'Sistema',
-                notes: 'Ajuste manual desde ficha de artículo',
-                createdAt: serverTimestamp(),
-            });
-        }
-        
-        await updateDoc(articleRef, dataToSave);
-
-        toast({ title: 'Artículo actualizado', description: 'El artículo ha sido actualizado correctamente.' });
-      } else {
-        // Create new article
-        const docRef = await addDoc(collection(firestore, 'inventory'), {
-            ...dataToSave,
-            stockReserved: 0,
-            createdAt: serverTimestamp(),
-        });
-        
-        // Create initial movement
-        if(values.stockAvailable > 0) {
-            await addDoc(collection(firestore, 'inventoryMovements'), {
-                itemId: docRef.id,
-                itemName: values.name,
-                itemSku: values.sku,
-                storeId: values.storeId,
-                storeName: storeName,
-                movementType: 'manual_entry',
-                referenceId: docRef.id,
-                referenceType: 'entry',
-                quantity: values.stockAvailable,
-                stockBefore: 0,
-                stockAfter: values.stockAvailable,
-                userId: user.uid,
-                userName: user.name || 'Sistema',
-                notes: 'Entrada inicial de inventario',
-                createdAt: serverTimestamp(),
-            });
-        }
-        
-        toast({ title: 'Artículo creado', description: 'El nuevo artículo ha sido agregado al inventario.' });
-      }
-
-      onOpenChange(false);
-      form.reset();
-    } catch (error) {
-      console.error("Error saving article:", error);
-      toast({ variant: 'destructive', title: 'Error al guardar', description: 'No se pudo guardar el artículo. Inténtalo de nuevo.' });
-    } finally {
-      setIsSubmitting(false);
-    }
+    toast({
+      title: 'Funcionalidad en Desarrollo',
+      description: 'La creación y edición de artículos se conectará a la base de datos en la siguiente fase.',
+    });
+    
+    setIsSubmitting(false);
+    onOpenChange(false);
   };
 
   return (
@@ -302,7 +202,7 @@ export function ArticleFormDialog({ isOpen, onOpenChange, article, stores }: Art
                     <FormItem><FormLabel>Valor Declarado (RD$)*</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="stockAvailable" render={({ field }) => (
-                    <FormItem><FormLabel>Stock Inicial/Disponible*</FormLabel><FormControl><Input type="number" {...field} disabled={!article && !!article?.id} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Stock Inicial/Disponible*</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="minStock" render={({ field }) => (
                     <FormItem><FormLabel>Punto de Reorden*</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>

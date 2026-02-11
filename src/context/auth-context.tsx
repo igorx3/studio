@@ -2,97 +2,56 @@
 
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import type { User } from '@/lib/types';
-import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut, User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { FirebaseContext } from '@/firebase/context';
+import type { User, UserRole } from '@/lib/types';
+import { mockUsers } from '@/lib/data';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface AuthContextType {
   user: User | null;
-  firebaseUser: FirebaseUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  loginWithGoogle: () => Promise<void>;
-  logout: () => Promise<void>;
+  loginAs: (role: UserRole) => void;
+  logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
 
-  const { auth, firestore, isInitializing } = useContext(FirebaseContext);
-
+  // On initial load, try to get user from localStorage
   useEffect(() => {
-    if (isInitializing) {
-      return; // Wait for Firebase to be ready
-    }
-
-    if (auth && firestore) {
-      const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
-        if (fbUser) {
-          setFirebaseUser(fbUser);
-          const userDocRef = doc(firestore, 'users', fbUser.uid);
-          const userDocSnap = await getDoc(userDocRef);
-
-          if (userDocSnap.exists()) {
-            const userData = userDocSnap.data() as User;
-            setUser(userData);
-          } else {
-            // Create a new user profile if it doesn't exist
-            const newUser: User = {
-              uid: fbUser.uid,
-              name: fbUser.displayName,
-              email: fbUser.email,
-              avatarUrl: fbUser.photoURL,
-              role: 'client', // Default role
-            };
-            await setDoc(userDocRef, { ...newUser, createdAt: serverTimestamp() });
-            setUser(newUser);
-          }
-        } else {
-          setUser(null);
-          setFirebaseUser(null);
-        }
-        setIsLoading(false);
-      });
-      return () => unsubscribe();
-    } else {
-      // Firebase is not available, but initialization is finished.
-      console.warn("Auth provider: Firebase services not available.");
-      setIsLoading(false);
-      setUser(null);
-      setFirebaseUser(null);
-    }
-  }, [isInitializing, auth, firestore]);
-
-  const loginWithGoogle = async () => {
-    if (!auth) {
-      console.error("Firebase Auth is not initialized.");
-      return;
-    };
-    setIsLoading(true);
-    const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
-      // onAuthStateChanged will handle the rest
-      router.push('/dashboard');
+      const storedUser = localStorage.getItem('demo-user');
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      }
     } catch (error) {
-      console.error("Error during Google sign-in:", error);
-      setIsLoading(false);
+      console.error("Could not parse user from localStorage", error);
+      localStorage.removeItem('demo-user');
     }
+    setIsLoading(false);
+  }, []);
+  
+  const loginAs = (role: UserRole) => {
+    setIsLoading(true);
+    const userToLogin = mockUsers[role];
+    if (userToLogin) {
+      setUser(userToLogin);
+      localStorage.setItem('demo-user', JSON.stringify(userToLogin));
+      router.push('/dashboard');
+    } else {
+        console.error(`No mock user found for role: ${role}`);
+    }
+    setIsLoading(false);
   };
 
-  const logout = async () => {
-    if (auth) {
-      await signOut(auth);
-    }
+  const logout = () => {
     setUser(null); 
+    localStorage.removeItem('demo-user');
     router.push('/');
   };
 
@@ -110,6 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [isLoading, isAuthenticated, pathname, router]);
 
+  // This prevents flash of unauthenticated content
   if (isLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
@@ -124,9 +84,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
   }
 
-
   return (
-    <AuthContext.Provider value={{ user, firebaseUser, isAuthenticated, isLoading, loginWithGoogle, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, isLoading, loginAs, logout }}>
       {children}
     </AuthContext.Provider>
   );
