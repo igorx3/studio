@@ -59,10 +59,10 @@ const operationsNavItems = [
 const adminNavItems = [
     { href: '/dashboard/mensajeros', label: 'Mensajeros', icon: Truck, roles: ['admin', 'operations'] },
     { href: '/dashboard/empleados', label: 'Empleados', icon: Users, roles: ['admin'] },
-    { href: '/dashboard/clientes', label: 'Tiendas', icon: Contact, roles: ['admin', 'operations'] },
+    { href: '/dashboard/tiendas', label: 'Tiendas', icon: Contact, roles: ['admin', 'operations'] },
     { href: '/dashboard/destinatarios', label: 'Destinatarios', icon: Users, roles: ['admin', 'operations'] },
     { href: '/dashboard/suplidores', label: 'Suplidores', icon: Building, roles: ['admin'] },
-    { href: '/dashboard/inventario', label: 'Inventario', icon: LayoutGrid, roles: ['admin', 'operations'] },
+    { href: '/dashboard/inventario', label: 'Inventario', icon: LayoutGrid, roles: ['admin', 'operations', 'client'] },
     { href: '/dashboard/base-de-datos', label: 'Base de Datos', icon: Database, roles: ['admin'] },
     { href: '/dashboard/ingresos', label: 'Ingresos', icon: TrendingUp, roles: ['admin', 'finance'] },
     { href: '/dashboard/gastos', label: 'Gastos', icon: TrendingDown, roles: ['admin', 'finance'] },

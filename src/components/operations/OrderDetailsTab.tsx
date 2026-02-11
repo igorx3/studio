@@ -53,7 +53,9 @@ export default function OrderDetailsTab({ order }: OrderDetailsTabProps) {
   const isClient = user?.role === 'client';
   const [currentStatus, setCurrentStatus] = React.useState<OrderStatus>(order.status);
   const [isNoveltyDialogOpen, setIsNoveltyDialogOpen] = React.useState(false);
-  const isStatusGenerated = order.status === 'Generado';
+  
+  // Rule: 'Generado' status cannot be re-selected once changed.
+  const isStatusGenerated = order.history?.some(h => h.from === 'Generado' && h.to !== 'Generado') ?? (order.status !== 'Generado');
 
   const handleStatusChange = (newStatus: OrderStatus) => {
     if (newStatus === 'Novedad' && !isClient) {
@@ -101,7 +103,7 @@ export default function OrderDetailsTab({ order }: OrderDetailsTabProps) {
                                         <SelectItem 
                                             key={status} 
                                             value={status} 
-                                            disabled={status === 'Generado' && !isStatusGenerated}
+                                            disabled={status === 'Generado' && isStatusGenerated}
                                         >
                                             {status}
                                         </SelectItem>
@@ -147,7 +149,7 @@ export default function OrderDetailsTab({ order }: OrderDetailsTabProps) {
                 <h4 className="font-semibold mb-4 text-lg">Financiero</h4>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6 items-start">
                     <DetailItem label="Monto COD" value={`$${order.financials.codAmount.toLocaleString()}`} />
-                    <DetailItem label="Cobrado a Mensajero" value={<Badge variant={order.financials.collectedFromCourier ? 'default' : 'destructive'}>{order.financials.collectedFromCourier ? 'Sí' : 'No'}</Badge>} />
+                    {!isClient && <DetailItem label="Cobrado a Mensajero" value={<Badge variant={order.financials.collectedFromCourier ? 'default' : 'destructive'}>{order.financials.collectedFromCourier ? 'Sí' : 'No'}</Badge>} />}
                     <div className="col-span-2 md:col-span-2 bg-muted p-4 rounded-lg">
                         <p className="font-semibold mb-2">Desglose de Costos</p>
                         <div className="space-y-1 text-sm">

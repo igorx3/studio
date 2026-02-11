@@ -1,4 +1,4 @@
-import type { User, Order, UserRole, OrderComment, OrderEvent, ProductLineItem } from './types';
+import type { User, Order, UserRole, OrderComment, OrderEvent, ProductLineItem, InventoryItem } from './types';
 
 export const mockUsers: Record<UserRole, User> = {
   admin: {
@@ -107,6 +107,7 @@ export const mockOrders: Order[] = [
     products: mockProducts,
     financials: { codAmount: 2500, collectedFromCourier: false, freightCost: 300, fulfillmentCost: 60, serviceFee: 16, totalCost: 376, netToLiquidate: 2124 },
     cashOnDeliveryAmount: 2500,
+    collectedFromCourier: false,
   },
   {
     id: '2',
@@ -128,6 +129,7 @@ export const mockOrders: Order[] = [
     pickupAddress: { id: 'pick1', name: 'Almacén ElectroHogar', city: 'Santiago', sector: 'Zona Industrial', province: 'Santiago', addressLine1: 'Calle Industrial 1' },
     financials: { codAmount: 15000, collectedFromCourier: false, freightCost: 500, fulfillmentCost: 0, serviceFee: 16, totalCost: 516, netToLiquidate: 14484 },
     cashOnDeliveryAmount: 15000,
+    collectedFromCourier: false,
   },
   {
     id: '3',
@@ -147,6 +149,7 @@ export const mockOrders: Order[] = [
     thirdPartyCourier: 'Chintra.com',
     financials: { codAmount: 850, collectedFromCourier: false, freightCost: 0, fulfillmentCost: 60, serviceFee: 16, totalCost: 76, netToLiquidate: 774 },
     cashOnDeliveryAmount: 850,
+    collectedFromCourier: false,
   },
   {
     id: '4',
@@ -166,6 +169,7 @@ export const mockOrders: Order[] = [
     products: [{ id: 'prod5', name: 'Vestido de Verano', sku: 'VES-SUM-05', quantity: 1, declaredValue: 3200 }],
     financials: { codAmount: 3200, collectedFromCourier: true, freightCost: 350, fulfillmentCost: 60, serviceFee: 16, totalCost: 426, netToLiquidate: 2774 },
      cashOnDeliveryAmount: 3200,
+     collectedFromCourier: true,
   },
   {
     id: '5',
@@ -196,5 +200,84 @@ export const mockOrders: Order[] = [
       ],
     financials: { codAmount: 1200, collectedFromCourier: false, freightCost: 300, fulfillmentCost: 60, serviceFee: 16, totalCost: 376, netToLiquidate: 824 },
     cashOnDeliveryAmount: 1200,
+    collectedFromCourier: false,
+  },
+];
+
+
+export const mockInventoryItems: InventoryItem[] = [
+  {
+    id: 'inv1',
+    photoUrl: 'https://picsum.photos/seed/item1/100/100',
+    name: 'Magnesio Complex 60 caps',
+    sku: 'SKU-MAG001',
+    storeName: 'Tienda Moda',
+    category: 'Suplementos',
+    stockAvailable: 150,
+    stockReserved: 12,
+    stockTotal: 162,
+    declaredValue: 1200,
+    location: 'Q1',
+    weight: 150,
+    dimensions: { length: 10, width: 5, height: 5 },
+    expirationDate: '2025-12-31',
+    status: 'Activo',
+    createdAt: '2024-07-01T10:00:00Z',
+    reorderPoint: 20,
+  },
+  {
+    id: 'inv2',
+    photoUrl: 'https://picsum.photos/seed/item2/100/100',
+    name: 'Vitamina D3',
+    sku: 'SKU-VD3002',
+    storeName: 'Tienda Moda',
+    category: 'Suplementos',
+    stockAvailable: 8,
+    stockReserved: 2,
+    stockTotal: 10,
+    declaredValue: 800,
+    location: 'Q2',
+    weight: 100,
+    dimensions: { length: 8, width: 4, height: 4 },
+    expirationDate: '2026-06-30',
+    status: 'Activo',
+    createdAt: '2024-07-01T10:00:00Z',
+    reorderPoint: 10,
+  },
+  {
+    id: 'inv3',
+    photoUrl: 'https://picsum.photos/seed/item3/100/100',
+    name: 'Smart TV 55"',
+    sku: 'TV-LG-55',
+    storeName: 'ElectroHogar',
+    category: 'Electrónica',
+    stockAvailable: 0,
+    stockReserved: 0,
+    stockTotal: 0,
+    declaredValue: 15000,
+    location: 'P5',
+    weight: 15000,
+    dimensions: { length: 123, width: 71, height: 8 },
+    status: 'Agotado',
+    createdAt: '2024-06-15T10:00:00Z',
+    reorderPoint: 2,
+  },
+    {
+    id: 'inv4',
+    photoUrl: 'https://picsum.photos/seed/item4/100/100',
+    name: 'Vestido de Verano',
+    sku: 'VES-SUM-05',
+    storeName: 'Tienda Moda',
+    category: 'Ropa',
+    stockAvailable: 25,
+    stockReserved: 5,
+    stockTotal: 30,
+    declaredValue: 3200,
+    location: 'P1',
+    weight: 400,
+    dimensions: { length: 40, width: 30, height: 5 },
+    status: 'Activo',
+    createdAt: '2024-07-10T10:00:00Z',
+    reorderPoint: 5,
   },
 ];

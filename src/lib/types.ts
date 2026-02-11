@@ -107,7 +107,7 @@ export interface Order {
 export interface OrderComment {
   id: string;
   user: {
-    name: string;
+    name:string;
     avatarUrl?: string;
   };
   createdAt: string;
@@ -150,4 +150,57 @@ export interface Store {
             serviceFee: number;
         }
     }
+}
+
+// From Part 5
+export type InventoryItemStatus = 'Activo' | 'Inactivo' | 'Agotado';
+
+export interface InventoryItem {
+  id: string;
+  photoUrl: string;
+  name: string;
+  sku: string;
+  barcode?: string;
+  storeName: string;
+  category: string;
+  stockAvailable: number;
+  stockReserved: number;
+  stockTotal: number;
+  declaredValue: number;
+  location: SubLocation;
+  weight: number; // in grams
+  dimensions: {
+    length: number; // in cm
+    width: number;
+    height: number;
+  };
+  expirationDate?: string;
+  status: InventoryItemStatus;
+  createdAt: string;
+  reorderPoint: number;
+}
+
+export type InventoryMovementType = 
+  | 'Entrada de Mercancía'
+  | 'Reserva por Pedido'
+  | 'Liberación de Reserva'
+  | 'Salida por Despacho'
+  | 'Entrada por Devolución'
+  | 'Ajuste Manual (+)'
+  | 'Ajuste Manual (-)'
+  | 'Salida por Merma';
+
+export interface InventoryMovement {
+  id: string;
+  timestamp: string;
+  productName: string;
+  productSku: string;
+  storeName: string;
+  type: InventoryMovementType;
+  reference?: string; // Order tracking ID or adjustment ID
+  quantityChange: number; // +N for entry, -N for exit
+  stockBefore: number;
+  stockAfter: number;
+  user: string; // User who performed the action
+  notes?: string;
 }
