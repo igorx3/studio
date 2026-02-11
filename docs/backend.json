@@ -1,398 +1,366 @@
 {
   "entities": {
-    "Store": {
-      "title": "Store",
-      "description": "Represents a client store/business that uses the delivery service.",
-      "type": "object",
-      "properties": {
-        "name": { "type": "string" },
-        "contactName": { "type": "string" },
-        "email": { "type": "string", "format": "email" },
-        "phone": { "type": "string" },
-        "address": { "type": "string" },
-        "logo": { "type": "string", "format": "uri" },
-        "rates": {
-          "type": "object",
-          "properties": {
-            "freight": { "type": "number" },
-            "fulfillment": { "type": "number" },
-            "serviceFee": { "type": "number" }
-          }
-        },
-        "nonEffectiveFactor": {
-          "type": "object",
-          "properties": {
-            "return": {
-              "type": "object",
-              "properties": {
-                "freightPercent": { "type": "number" },
-                "fulfillmentPercent": { "type": "number" },
-                "serviceFeePercent": { "type": "number" }
-              }
-            },
-            "cancelled": {
-              "type": "object",
-              "properties": {
-                "freightPercent": { "type": "number" },
-                "fulfillmentPercent": { "type": "number" },
-                "serviceFeePercent": { "type": "number" }
-              }
-            }
-          }
-        },
-        "status": { "type": "string", "enum": ["active", "inactive"] },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "updatedAt": { "type": "string", "format": "date-time" }
-      }
-    },
-    "InventoryItem": {
-      "title": "Inventory Item",
-      "description": "An item stored in the warehouse.",
-      "type": "object",
-      "properties": {
-        "name": { "type": "string" },
-        "sku": { "type": "string" },
-        "barcode": { "type": "string" },
-        "storeId": { "type": "string" },
-        "storeName": { "type": "string" },
-        "category": { "type": "string" },
-        "description": { "type": "string" },
-        "photos": { "type": "array", "items": { "type": "string", "format": "uri" } },
-        "declaredValue": { "type": "number" },
-        "stockAvailable": { "type": "number" },
-        "stockReserved": { "type": "number" },
-        "stockTotal": { "type": "number" },
-        "minStock": { "type": "number" },
-        "idealStock": { "type": "number" },
-        "warehouseLocation": { "type": "string" },
-        "weight": { "type": "number" },
-        "dimensions": {
-          "type": "object",
-          "properties": {
-            "length": { "type": "number" },
-            "width": { "type": "number" },
-            "height": { "type": "number" }
-          }
-        },
-        "expirationDate": { "type": "string", "format": "date-time" },
-        "status": { "type": "string", "enum": ["active", "inactive", "depleted"] },
-        "dropshipping": {
-          "type": "object",
-          "properties": {
-            "enabled": { "type": "boolean" },
-            "minPrice": { "type": "number" },
-            "suggestedPrice": { "type": "number" },
-            "fee": { "type": "number" },
-            "feeType": { "type": "string", "enum": ["fixed", "percentage"] },
-            "description": { "type": "string" },
-            "photos": { "type": "array", "items": { "type": "string", "format": "uri" } },
-            "category": { "type": "string" }
-          }
-        },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "updatedAt": { "type": "string", "format": "date-time" }
-      }
-    },
-    "InventoryItemPrivate": {
-      "title": "Inventory Item Private Data",
-      "description": "Sensitive data for an inventory item, only accessible by admins.",
-      "type": "object",
-      "properties": {
-        "cost": { "type": "number" }
-      }
-    },
-    "InventoryMovement": {
-      "title": "Inventory Movement",
-      "description": "A log of every stock change for an inventory item.",
-      "type": "object",
-      "properties": {
-        "itemId": { "type": "string" },
-        "itemName": { "type": "string" },
-        "itemSku": { "type": "string" },
-        "storeId": { "type": "string" },
-        "storeName": { "type": "string" },
-        "movementType": { "type": "string", "enum": ["order_reserve", "order_dispatch", "order_delivered", "order_cancelled", "order_returned", "manual_entry", "manual_exit", "adjustment", "shrinkage"] },
-        "referenceId": { "type": "string" },
-        "referenceType": { "type": "string", "enum": ["order", "entry", "exit", "adjustment"] },
-        "quantity": { "type": "number" },
-        "stockBefore": { "type": "number" },
-        "stockAfter": { "type": "number" },
-        "userId": { "type": "string" },
-        "userName": { "type": "string" },
-        "notes": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      }
-    },
-    "InventoryTransaction": {
-      "title": "Inventory Transaction",
-      "description": "Record of a manual inventory operation like entry, exit, or adjustment.",
-      "type": "object",
-      "properties": {
-        "type": { "type": "string", "enum": ["entry", "exit", "adjustment"] },
-        "storeId": { "type": "string" },
-        "storeName": { "type": "string" },
-        "items": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "itemId": { "type": "string" },
-              "itemName": { "type": "string" },
-              "itemSku": { "type": "string" },
-              "quantity": { "type": "number" },
-              "warehouseLocation": { "type": "string" },
-              "condition": { "type": "string", "enum": ["good", "damaged"] },
-              "notes": { "type": "string" }
-            }
-          }
-        },
-        "reason": { "type": "string" },
-        "referenceNumber": { "type": "string" },
-        "photos": { "type": "array", "items": { "type": "string", "format": "uri" } },
-        "processedBy": { "type": "string" },
-        "processedByName": { "type": "string" },
-        "authorizedBy": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      }
-    },
     "Order": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Order",
-      "description": "A delivery order.",
       "type": "object",
+      "description": "Represents a delivery order.",
       "properties": {
-        "trackingId": { "type": "string" },
-        "storeId": { "type": "string" },
-        "storeName": { "type": "string" },
-        "serviceType": { "type": "string", "enum": ["logistics_360", "logistics_180", "fulfillment"] },
-        "status": { "type": "string" },
-        "previousStatus": { "type": "string" },
-        "paymentType": { "type": "string", "enum": ["cod", "prepaid"] },
-        "codAmount": { "type": "number" },
-        "collectedFromCourier": { "type": "boolean" },
-        "recipient": {
-          "type": "object",
-          "properties": {
-            "name": { "type": "string" },
-            "phone": { "type": "string" },
-            "city": { "type": "string" },
-            "sector": { "type": "string" },
-            "address": { "type": "string" }
-          }
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the order."
         },
-        "recipientId": { "type": "string" },
-        "products": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "itemId": { "type": "string" },
-              "name": { "type": "string" },
-              "sku": { "type": "string" },
-              "quantity": { "type": "number" },
-              "declaredValue": { "type": "number" }
-            }
-          }
+        "clientId": {
+          "type": "string",
+          "description": "Reference to Client. (Relationship: Client 1:N Order)"
         },
-        "costs": {
-          "type": "object",
-          "properties": {
-            "freight": { "type": "number" },
-            "fulfillment": { "type": "number" },
-            "serviceFee": { "type": "number" },
-            "total": { "type": "number" },
-            "netToStore": { "type": "number" }
-          }
+        "courierId": {
+          "type": "string",
+          "description": "Reference to Courier. (Relationship: Courier 1:N Order). Can be null if no courier is assigned."
         },
-        "courier": {
-          "type": "object",
-          "properties": {
-            "id": { "type": "string" },
-            "name": { "type": "string" }
-          }
+        "warehouseId": {
+          "type": "string",
+          "description": "Reference to Warehouse. (Relationship: Warehouse 1:N Order)"
         },
-        "pickupAddress": {
-          "type": "object",
-          "properties": {
-            "name": { "type": "string" },
-            "address": { "type": "string" }
-          }
+        "orderDate": {
+          "type": "string",
+          "description": "Date and time the order was placed.",
+          "format": "date-time"
         },
-        "thirdPartyCarrier": { "type": "string", "enum": ["chintra", "aurelpack"] },
-        "warehouse": {
-          "type": "object",
-          "properties": {
-            "packingStatus": { "type": "string", "enum": ["pending", "packed", "dispatched"] },
-            "mainLocation": { "type": "string" },
-            "subLocation": { "type": "string" }
-          }
+        "deliveryAddress": {
+          "type": "string",
+          "description": "Delivery address for the order."
         },
-        "isDraft": { "type": "boolean" },
-        "draftTrackingId": { "type": "string" },
-        "isDropshipping": { "type": "boolean" },
-        "dropshipping": {
-          "type": "object",
-          "properties": {
-            "originalCost": { "type": "number" },
-            "salePrice": { "type": "number" },
-            "minPrice": { "type": "number" },
-            "fee": { "type": "number" },
-            "feeType": { "type": "string" },
-            "profit": { "type": "number" },
-            "storeProfit": { "type": "number" }
-          }
+        "deliveryInstructions": {
+          "type": "string",
+          "description": "Special delivery instructions."
         },
-        "createdBy": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "updatedAt": { "type": "string", "format": "date-time" }
-      }
+        "status": {
+          "type": "string",
+          "description": "Current status of the order (e.g., pending, in transit, delivered).",
+          "format": "string"
+        },
+        "totalAmount": {
+          "type": "number",
+          "description": "Total amount of the order."
+        }
+      },
+      "required": [
+        "id",
+        "clientId",
+        "warehouseId",
+        "orderDate",
+        "deliveryAddress",
+        "status",
+        "totalAmount"
+      ]
     },
     "Client": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Client",
-      "description": "Represents an end recipient of packages. ID is the phone number.",
       "type": "object",
+      "description": "Represents a client (shop) using the delivery service.",
       "properties": {
-        "name": { "type": "string" },
-        "phone": { "type": "string" },
-        "addresses": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the client."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the client (shop)."
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the client.",
+          "format": "email"
+        },
+        "phone": {
+          "type": "string",
+          "description": "Phone number of the client."
+        },
+        "address": {
+          "type": "string",
+          "description": "Address of the client."
+        },
+        "walletBalance": {
+          "type": "number",
+          "description": "Current wallet balance of the client."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "email",
+        "phone",
+        "address",
+        "walletBalance"
+      ]
+    },
+    "Courier": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Courier",
+      "type": "object",
+      "description": "Represents a courier.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the courier."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the courier."
+        },
+        "phone": {
+          "type": "string",
+          "description": "Phone number of the courier."
+        },
+        "vehicleType": {
+          "type": "string",
+          "description": "Type of vehicle the courier uses (e.g., motorcycle, car)."
+        },
+        "currentLocation": {
+          "type": "string",
+          "description": "Current location of the courier (e.g., GPS coordinates)."
+        },
+        "isAvailable": {
+          "type": "boolean",
+          "description": "Indicates if the courier is currently available for assignments."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "phone",
+        "vehicleType",
+        "isAvailable"
+      ]
+    },
+    "Warehouse": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Warehouse",
+      "type": "object",
+      "description": "Represents a warehouse.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the warehouse."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the warehouse."
+        },
+        "address": {
+          "type": "string",
+          "description": "Address of the warehouse."
+        },
+        "capacity": {
+          "type": "number",
+          "description": "Maximum storage capacity of the warehouse."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "address",
+        "capacity"
+      ]
+    },
+    "Settlement": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Settlement",
+      "type": "object",
+      "description": "Represents a financial settlement for a courier.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the settlement."
+        },
+        "courierId": {
+          "type": "string",
+          "description": "Reference to Courier. (Relationship: Courier 1:N Settlement)"
+        },
+        "settlementDate": {
+          "type": "string",
+          "description": "Date of the settlement.",
+          "format": "date-time"
+        },
+        "amount": {
+          "type": "number",
+          "description": "Amount paid to the courier."
+        },
+        "orderIds": {
           "type": "array",
+          "description": "References to Orders included in this settlement. (Relationship: Order N:N Settlement).",
           "items": {
-            "type": "object",
-            "properties": {
-              "city": { "type": "string" },
-              "sector": { "type": "string" },
-              "address": { "type": "string" }
-            }
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "courierId",
+        "settlementDate",
+        "amount",
+        "orderIds"
+      ]
+    },
+    "RouteOptimizationRequest": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "RouteOptimizationRequest",
+      "type": "object",
+      "description": "Represents a route optimization request submitted to the AI tool.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the route optimization request."
+        },
+        "orderIds": {
+          "type": "array",
+          "description": "References to Orders to be included in the route optimization.",
+          "items": {
+            "type": "string"
           }
         },
-        "totalOrders": { "type": "number" },
-        "deliveredCount": { "type": "number" },
-        "returnedCount": { "type": "number" },
-        "cancelledCount": { "type": "number" },
-        "noveltyCount": { "type": "number" },
-        "successRate": { "type": "number" },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "updatedAt": { "type": "string", "format": "date-time" }
-      }
-    },
-    "OrderComment": {
-      "title": "Order Comment",
-      "description": "A comment on a delivery order.",
-      "type": "object",
-      "properties": {
-        "orderId": { "type": "string" },
-        "trackingId": { "type": "string" },
-        "userId": { "type": "string" },
-        "userName": { "type": "string" },
-        "userRole": { "type": "string" },
-        "comment": { "type": "string" },
-        "photos": { "type": "array", "items": { "type": "string", "format": "uri" } },
-        "createdAt": { "type": "string", "format": "date-time" }
-      }
-    },
-    "OrderNovelty": {
-      "title": "Order Novelty",
-      "description": "A record of a delivery issue or novelty.",
-      "type": "object",
-      "properties": {
-        "orderId": { "type": "string" },
-        "trackingId": { "type": "string" },
-        "reportedBy": { "type": "string" },
-        "reportedByName": { "type": "string" },
-        "photo": { "type": "string", "format": "uri" },
-        "comment": { "type": "string" },
-        "reportedAt": { "type": "string", "format": "date-time" },
-        "resolved": { "type": "boolean" },
-        "resolution": {
-          "type": "object",
-          "properties": {
-            "type": { "type": "string", "enum": ["reschedule", "cancel", "change_data"] },
-            "resolvedBy": { "type": "string" },
-            "resolvedByName": { "type": "string" },
-            "resolvedAt": { "type": "string", "format": "date-time" },
-            "comment": { "type": "string" },
-            "scheduledDate": { "type": "string", "format": "date-time" },
-            "updatedRecipient": {
-              "type": "object",
-              "properties": {
-                "name": { "type": "string" },
-                "phone": { "type": "string" },
-                "address": { "type": "string" },
-                "city": { "type": "string" },
-                "sector": { "type": "string" }
-              }
-            }
-          }
+        "courierId": {
+          "type": "string",
+          "description": "Reference to Courier for whom the route is being optimized. (Relationship: Courier 1:N RouteOptimizationRequest)"
+        },
+        "requestTime": {
+          "type": "string",
+          "description": "Date and time the route optimization was requested.",
+          "format": "date-time"
+        },
+        "optimizedRouteData": {
+          "type": "string",
+          "description": "The optimized route data, possibly in a serialized format (e.g., JSON string)."
         }
-      }
-    },
-    "OrderStatusHistory": {
-      "title": "Order Status History",
-      "description": "Log of status changes for an order.",
-      "type": "object",
-      "properties": {
-        "orderId": { "type": "string" },
-        "trackingId": { "type": "string" },
-        "previousStatus": { "type": "string" },
-        "newStatus": { "type": "string" },
-        "changedBy": { "type": "string" },
-        "changedByName": { "type": "string" },
-        "changedAt": { "type": "string", "format": "date-time" }
-      }
-    },
-    "OrderLocationHistory": {
-      "title": "Order Location History",
-      "description": "Log of location changes for an order.",
-      "type": "object",
-      "properties": {
-        "orderId": { "type": "string" },
-        "trackingId": { "type": "string" },
-        "previousLocation": { "type": "string" },
-        "newLocation": { "type": "string" },
-        "previousSubLocation": { "type": "string" },
-        "newSubLocation": { "type": "string" },
-        "changedBy": { "type": "string" },
-        "changedByName": { "type": "string" },
-        "changedAt": { "type": "string", "format": "date-time" }
-      }
-    },
-    "TrackingCounter": {
-      "title": "Tracking Counter",
-      "description": "A singleton document to generate sequential tracking IDs.",
-      "type": "object",
-      "properties": {
-        "lastNumber": { "type": "number" }
-      }
-    },
-    "UserProfile": {
-        "title": "User Profile",
-        "description": "Stores user profile information, including their role.",
-        "type": "object",
-        "properties": {
-            "uid": { "type": "string" },
-            "name": { "type": "string" },
-            "email": { "type": "string", "format": "email" },
-            "avatarUrl": { "type": "string", "format": "uri" },
-            "role": { "type": "string", "enum": ["admin", "operations", "client", "courier", "finance", "warehouse"] },
-            "storeId": { "type": "string" }
-        }
+      },
+      "required": [
+        "id",
+        "orderIds",
+        "courierId",
+        "requestTime",
+        "optimizedRouteData"
+      ]
     }
   },
   "auth": {
-    "providers": ["google.com", "password"]
+    "providers": [
+      "password",
+      "anonymous"
+    ]
   },
   "firestore": {
-    "/stores/{storeId}": { "schema": { "$ref": "#/entities/Store" } },
-    "/inventory/{itemId}": { "schema": { "$ref": "#/entities/InventoryItem" } },
-    "/inventory/{itemId}/private/pricing": { "schema": { "$ref": "#/entities/InventoryItemPrivate" } },
-    "/inventoryMovements/{movementId}": { "schema": { "$ref": "#/entities/InventoryMovement" } },
-    "/inventoryTransactions/{transactionId}": { "schema": { "$ref": "#/entities/InventoryTransaction" } },
-    "/orders/{orderId}": { "schema": { "$ref": "#/entities/Order" } },
-    "/clients/{clientId}": { "schema": { "$ref": "#/entities/Client" } },
-    "/orderComments/{commentId}": { "schema": { "$ref": "#/entities/OrderComment" } },
-    "/orderNovelties/{noveltyId}": { "schema": { "$ref": "#/entities/OrderNovelty" } },
-    "/orderStatusHistory/{historyId}": { "schema": { "$ref": "#/entities/OrderStatusHistory" } },
-    "/orderLocationHistory/{historyId}": { "schema": { "$ref": "#/entities/OrderLocationHistory" } },
-    "/trackingCounter/current": { "schema": { "$ref": "#/entities/TrackingCounter" } },
-    "/users/{userId}": { "schema": { "$ref": "#/entities/UserProfile" } }
+    "structure": [
+      {
+        "path": "/clients/{clientId}",
+        "definition": {
+          "entityName": "Client",
+          "schema": {
+            "$ref": "#/backend/entities/Client"
+          },
+          "description": "Stores client data. Secure reads/writes based on the authenticated user ID matching the clientId.",
+          "params": [
+            {
+              "name": "clientId",
+              "description": "The unique identifier of the client."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/clients/{clientId}/orders/{orderId}",
+        "definition": {
+          "entityName": "Order",
+          "schema": {
+            "$ref": "#/backend/entities/Order"
+          },
+          "description": "Stores orders associated with a specific client.  Secure reads/writes based on the authenticated user ID matching the clientId in the path.",
+          "params": [
+            {
+              "name": "clientId",
+              "description": "The unique identifier of the client."
+            },
+            {
+              "name": "orderId",
+              "description": "The unique identifier of the order."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/couriers/{courierId}",
+        "definition": {
+          "entityName": "Courier",
+          "schema": {
+            "$ref": "#/backend/entities/Courier"
+          },
+          "description": "Stores courier data. Secure reads/writes based on the authenticated user ID matching the courierId.",
+          "params": [
+            {
+              "name": "courierId",
+              "description": "The unique identifier of the courier."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/warehouses/{warehouseId}",
+        "definition": {
+          "entityName": "Warehouse",
+          "schema": {
+            "$ref": "#/backend/entities/Warehouse"
+          },
+          "description": "Stores warehouse data. Access controlled based on role-based authentication (e.g., only admins or warehouse personnel can access).",
+          "params": [
+            {
+              "name": "warehouseId",
+              "description": "The unique identifier of the warehouse."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/couriers/{courierId}/settlements/{settlementId}",
+        "definition": {
+          "entityName": "Settlement",
+          "schema": {
+            "$ref": "#/backend/entities/Settlement"
+          },
+          "description": "Stores settlement data for a specific courier. Secure reads/writes based on the authenticated user ID matching the courierId in the path.",
+          "params": [
+            {
+              "name": "courierId",
+              "description": "The unique identifier of the courier."
+            },
+            {
+              "name": "settlementId",
+              "description": "The unique identifier of the settlement."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/couriers/{courierId}/routeOptimizationRequests/{routeOptimizationRequestId}",
+        "definition": {
+          "entityName": "RouteOptimizationRequest",
+          "schema": {
+            "$ref": "#/backend/entities/RouteOptimizationRequest"
+          },
+          "description": "Stores route optimization requests for a specific courier. Secure reads/writes based on the authenticated user ID matching the courierId in the path.",
+          "params": [
+            {
+              "name": "courierId",
+              "description": "The unique identifier of the courier."
+            },
+            {
+              "name": "routeOptimizationRequestId",
+              "description": "The unique identifier of the route optimization request."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore data structure is designed to support the core features of the KhlothiaPack application, including order management, courier management, financial reconciliation, warehouse management, and route optimization. The structure prioritizes authorization independence by denormalizing authorization data where necessary, ensuring that security rules can be written without complex `get()` calls. This approach enhances security, scalability, and debuggability. Furthermore, Structural Segregation ensures that each collection houses documents with similar security postures.\n\n**Authorization Independence and QAPs:**\n\n*   **Clients:** Client data is stored under `/clients/{clientId}` ensuring that clients can only access their data using Firebase Authentication. This path-based authorization eliminates the need for complex rules.\n*   **Couriers:** Courier data is stored under `/couriers/{courierId}`, similar to Clients, enabling straightforward courier-specific access control.\n*   **Orders:** Orders are stored under `/clients/{clientId}/orders/{orderId}`. This structure facilitates secure listing of orders per client. The `clientId` is used in the path, making authorization independent and QAP-compliant for client-specific order access.\n*   **Warehouses:** Warehouse data is stored under `/warehouses/{warehouseId}` with similar straightforward access control.\n*   **Settlements:** Settlements are stored under `/couriers/{courierId}/settlements/{settlementId}`.  The `courierId` is part of the path, making authorization independent and QAP-compliant.  This structure simplifies access control for settlements related to specific couriers.\n*   **Route Optimization Requests:** Route optimization requests are stored under `/couriers/{courierId}/routeOptimizationRequests/{routeOptimizationRequestId}`. This structure enforces the relationship between a courier and their route optimization requests, facilitating simpler and more secure rules.\n\nThis design ensures that list operations (`QAPs`) are secure, as access is controlled via path-based authorization or denormalized membership maps.  Authorization independence is achieved by avoiding `get()` calls in rules, enabling atomic operations and easier debugging."
   }
 }

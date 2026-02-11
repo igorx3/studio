@@ -1,109 +1,170 @@
+/**
+ * This ruleset enforces a strict user-ownership security model for a logistics and delivery application.
+ *
+ * Core Philosophy:
+ * Access to data is primarily determined by whether the authenticated user's ID matches the ID
+ * in the document path (e.g., a client can only access their own data under `/clients/{clientId}`).
+ * This creates strong, queryable security boundaries between different users.
+ *
+ * Data Structure:
+ * Data is segregated into top-level collections for different user types (`clients`, `couriers`).
+ * User-specific subcollections (like `orders`, `settlements`, and `routeOptimizationRequests`)
+ * are nested under their respective owners, inheriting access control directly from the parent path.
+ *
+ * Key Security Decisions:
+ * - Strict Ownership: All user-related data is locked down to the owner specified in the path.
+ *   A user cannot see or modify another user's data.
+ * - No User Listing: The top-level `clients` and `couriers` collections do not allow `list`
+ *   operations to prevent the enumeration of all users on the platform.
+ * - Locked `warehouses` Collection: The `/warehouses` collection is currently locked down for all
+ *   client access. The application specification mentions role-based access (e.g., 'admin'),
+ *   but does not define how roles are stored. To maintain security, access is denied until a
+ *   role system is properly implemented.
+ *
+ * Denormalization for Authorization:
+ * The security model relies heavily on path-based authorization. For example, placing orders under
+ * `/clients/{clientId}/orders/{orderId}` allows rules to secure the entire collection with a simple
+ * check on `clientId` without needing to read individual order documents. To ensure data integrity,
+ * create/update rules validate that the `clientId` field within an order document matches the
+ * `clientId` from the path.
+ *
+ * Structural Segregation:
+ * Private data is clearly separated by user type. `clients` data is separate from `couriers` data,
+ * and their sensitive subcollections are nested underneath them, preventing data leakage.
+ */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    function isAuth() {
+
+    // Helper functions to improve readability and maintainability.
+
+    /**
+     * Checks if a user is authenticated.
+     */
+    function isSignedIn() {
       return request.auth != null;
     }
 
-    function getUserRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-    }
-
-    function isRole(role) {
-      return isAuth() && getUserRole() == role;
-    }
-    
-    function isOneOfRoles(roles) {
-      return isAuth() && getUserRole() in roles;
-    }
-
+    /**
+     * Checks if the authenticated user's UID matches the provided userId.
+     * This is the foundation of the ownership model.
+     */
     function isOwner(userId) {
-      return request.auth.uid == userId;
+      return isSignedIn() && request.auth.uid == userId;
     }
 
-    // Default deny all
-    match /{document=**} {
-      allow read, write: if false;
+    /**
+     * Checks if a document currently exists in Firestore.
+     * Used to protect against modifying or deleting non-existent documents.
+     */
+    function isExistingDoc() {
+      return resource != null;
     }
 
-    // USER PROFILES
-    match /users/{userId} {
-      allow read, write: if isAuth() && isOwner(userId);
+    /**
+     * Combines ownership and existence checks for update/delete operations.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && isExistingDoc();
     }
 
-    // STORES
-    match /stores/{storeId} {
-      allow read: if isAuth();
-      allow write: if isOneOfRoles(['admin', 'operations']);
-    }
-
-    // TRACKING COUNTER
-    match /trackingCounter/current {
-        allow read, write: if isAuth();
-    }
-
-    // INVENTORY
-    match /inventory/{itemId} {
-      allow read: if isAuth();
-      allow create, update: if isOneOfRoles(['admin', 'operations']);
-      // Allow client to update only their own items, and prevent them from editing dropshipping fields
-      allow update: if isAuth() && 
-                    resource.data.storeId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.storeId &&
-                    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'description', 'photos']); // Example of limited update
-      allow delete: if false;
-    }
-
-    // INVENTORY PRIVATE DATA (COSTS) - ADMIN ONLY
-    match /inventory/{itemId}/private/{pricingDoc} {
-       allow read, write: if isOneOfRoles(['admin']);
-    }
-
-    // ORDERS
-    match /orders/{orderId} {
-        // A client can read their own orders. Admin/ops/warehouse/finance/courier can read all.
-        allow read: if isAuth() && 
-                    (isOneOfRoles(['admin', 'operations', 'warehouse', 'finance', 'courier']) || 
-                    resource.data.storeId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.storeId);
-        // Any auth user can create an order (e.g. a client)
-        allow create: if isAuth();
-        // Only admin/ops can update orders broadly. Clients can only do specific actions.
-        allow update: if isOneOfRoles(['admin', 'operations']);
-    }
-    
-    // CLIENTS (Recipients)
+    /**
+     * @description Rules for the Client collection. A user can create their own client
+     *              document and can read/update/delete it, but cannot list other clients.
+     * @path /clients/{clientId}
+     * @allow A signed-in user with uid 'user123' (create) their own document at /clients/user123.
+     * @deny A user (get) a document at /clients/anotherUser456.
+     * @principle Enforces strict document ownership and prevents user enumeration.
+     */
     match /clients/{clientId} {
-      allow read, write: if isAuth();
+      allow get: if isOwner(clientId);
+      allow list: if false;
+      allow create: if isOwner(clientId) && request.resource.data.id == clientId;
+      allow update: if isExistingOwner(clientId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(clientId);
+
+      /**
+       * @description Rules for a client's Orders subcollection. Only the client who owns
+       *              the parent document can access these orders.
+       * @path /clients/{clientId}/orders/{orderId}
+       * @allow The client 'user123' (list) all orders under /clients/user123/orders.
+       * @deny Another user 'user456' (get) an order at /clients/user123/orders/orderABC.
+       * @principle Restricts access to a user's own data tree and validates relational integrity.
+       */
+      match /orders/{orderId} {
+        allow get: if isOwner(clientId);
+        allow list: if isOwner(clientId);
+        allow create: if isOwner(clientId) && request.resource.data.clientId == clientId;
+        allow update: if isExistingOwner(clientId) && request.resource.data.clientId == resource.data.clientId;
+        allow delete: if isExistingOwner(clientId);
+      }
     }
 
-    // IMMUTABLE LOGS
-    match /inventoryMovements/{movementId} {
-      allow create: if isAuth();
-      allow read: if isAuth() && (isOneOfRoles(['admin', 'operations', 'warehouse', 'finance']) || resource.data.storeId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.storeId);
-      allow update, delete: if false;
-    }
-    match /inventoryTransactions/{transactionId} {
-        allow create: if isAuth();
-        allow read: if isAuth() && (isOneOfRoles(['admin', 'operations', 'warehouse', 'finance']) || resource.data.storeId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.storeId);
-        allow update, delete: if false;
+    /**
+     * @description Rules for the Courier collection. A user can create their own courier
+     *              document and can read/update/delete it, but cannot list other couriers.
+     * @path /couriers/{courierId}
+     * @allow A signed-in user with uid 'courier123' (create) their own document at /couriers/courier123.
+     * @deny A user (get) a document at /couriers/anotherCourier456.
+     * @principle Enforces strict document ownership and prevents user enumeration.
+     */
+    match /couriers/{courierId} {
+      allow get: if isOwner(courierId);
+      allow list: if false;
+      allow create: if isOwner(courierId) && request.resource.data.id == courierId;
+      allow update: if isExistingOwner(courierId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(courierId);
+
+      /**
+       * @description Rules for a courier's Settlements subcollection. Only the courier
+       *              who owns the parent document can access their settlements.
+       * @path /couriers/{courierId}/settlements/{settlementId}
+       * @allow The courier 'courier123' (get) a settlement at /couriers/courier123/settlements/settleABC.
+       * @deny Another user 'user456' (list) settlements under /couriers/courier123/settlements.
+       * @principle Restricts access to a user's own data tree and validates relational integrity.
+       */
+      match /settlements/{settlementId} {
+        allow get: if isOwner(courierId);
+        allow list: if isOwner(courierId);
+        allow create: if isOwner(courierId) && request.resource.data.courierId == courierId;
+        allow update: if isExistingOwner(courierId) && request.resource.data.courierId == resource.data.courierId;
+        allow delete: if isExistingOwner(courierId);
+      }
+
+      /**
+       * @description Rules for a courier's route optimization requests. Only the courier
+       *              who owns the parent document can access these requests.
+       * @path /couriers/{courierId}/routeOptimizationRequests/{routeOptimizationRequestId}
+       * @allow The courier 'courier123' (create) a request at /couriers/courier123/routeOptimizationRequests/reqXYZ.
+       * @deny Another user 'user456' (update) a request at /couriers/courier123/routeOptimizationRequests/reqXYZ.
+       * @principle Restricts access to a user's own data tree and validates relational integrity.
+       */
+      match /routeOptimizationRequests/{routeOptimizationRequestId} {
+        allow get: if isOwner(courierId);
+        allow list: if isOwner(courierId);
+        allow create: if isOwner(courierId) && request.resource.data.courierId == courierId;
+        allow update: if isExistingOwner(courierId) && request.resource.data.courierId == resource.data.courierId;
+        allow delete: if isExistingOwner(courierId);
+      }
     }
 
-    // Order related logs
-    match /orderStatusHistory/{historyId} {
-      allow read, create: if isAuth();
-      allow update, delete: if false;
-    }
-    match /orderLocationHistory/{historyId} {
-      allow read, create: if isAuth();
-      allow update, delete: if false;
-    }
-    match /orderComments/{commentId} {
-      allow read, create: if isAuth();
-      allow update, delete: if false;
-    }
-     match /orderNovelties/{noveltyId} {
-      allow read, create: if isAuth();
-      allow update: if isAuth(); // Allow updates for resolution
+    /**
+     * @description Rules for the Warehouses collection. Access is currently denied for all
+     *              operations pending implementation of a proper role-based access system.
+     * @path /warehouses/{warehouseId}
+     * @allow No operations are currently allowed for any user.
+     * @deny Any user (get) a warehouse document.
+     * @principle Enforces a secure-by-default posture for sensitive data where the
+     *              authorization mechanism is not yet defined.
+     */
+    match /warehouses/{warehouseId} {
+      // TODO: Implement role-based access control. The application specification
+      // requires admin or warehouse personnel roles, but the mechanism for checking
+      // roles (e.g., custom claims) is not defined. All access is denied for security.
+      allow get: if false;
+      allow list: if false;
+      allow create: if false;
+      allow update: if false;
       allow delete: if false;
     }
   }
