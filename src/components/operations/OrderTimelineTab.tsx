@@ -14,7 +14,7 @@ const TimelineItem = ({ event, isOpsUser }: { event: OrderEvent, isOpsUser: bool
     return (
         <div className="flex gap-4">
             <div className="flex flex-col items-center">
-                <div className="flex items-center justify-center h-8 w-8 rounded-full bg-muted">
+                <div className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-muted">
                     {event.eventType === 'Status Change' ? <Package className="h-4 w-4" /> : <MapPin className="h-4 w-4" />}
                 </div>
                 <div className="w-px h-full bg-border"></div>
@@ -31,6 +31,11 @@ const TimelineItem = ({ event, isOpsUser }: { event: OrderEvent, isOpsUser: bool
                 )}
                 {event.comment && (
                     <p className="text-sm text-muted-foreground mt-1 italic">"{event.comment}"</p>
+                )}
+                 {event.photoUrl && (
+                    <a href={event.photoUrl} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block">
+                        <img src={event.photoUrl} alt="Prueba de evento" className="h-24 w-24 object-cover rounded-md border" />
+                    </a>
                 )}
             </div>
         </div>

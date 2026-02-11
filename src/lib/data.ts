@@ -182,6 +182,18 @@ export const mockOrders: Order[] = [
     location: 'En Ruta',
     serviceType: 'Logística 360°',
     products: [{ id: 'prod6', name: 'Carro a Control Remoto', sku: 'JUG-CAR-01', quantity: 1, declaredValue: 1200 }],
+    history: [
+        {
+          id: 'hist-novedad-5',
+          eventType: 'Status Change',
+          user: { name: 'Pedro Martinez' },
+          createdAt: '2024-07-21T14:00:00Z',
+          from: 'En Ruta',
+          to: 'Novedad',
+          comment: 'Dirección no encontrada. El número del edificio no existe en la calle.',
+          photoUrl: 'https://picsum.photos/seed/novedad-5/600/400'
+        }
+      ],
     financials: { codAmount: 1200, collectedFromCourier: false, freightCost: 300, fulfillmentCost: 60, serviceFee: 16, totalCost: 376, netToLiquidate: 824 },
     cashOnDeliveryAmount: 1200,
   },

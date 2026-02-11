@@ -2,13 +2,26 @@
 
 import React from 'react';
 import type { Order } from '@/lib/types';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from '@/components/ui/dialog';
+import { useAuth } from '@/context/auth-context';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '../ui/button';
-import { Printer, X } from 'lucide-react';
+import { Printer, Copy, Ban } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import OrderDetailsTab from './OrderDetailsTab';
 import OrderCommentsTab from './OrderCommentsTab';
 import OrderTimelineTab from './OrderTimelineTab';
+import OrderNoveltyTab from './OrderNoveltyTab';
 
 interface OrderDetailDialogProps {
   order: Order | null;
@@ -16,10 +29,18 @@ interface OrderDetailDialogProps {
 }
 
 export default function OrderDetailDialog({ order, onOpenChange }: OrderDetailDialogProps) {
+  const { user } = useAuth();
+  const isClient = user?.role === 'client';
   const isOpen = order !== null;
 
   if (!order) {
     return null;
+  }
+
+  const handleAnular = () => {
+    console.log('Anulando pedido...');
+    // Here would be API call to change status
+    onOpenChange(false); // Close dialog after action
   }
 
   return (
@@ -39,16 +60,42 @@ export default function OrderDetailDialog({ order, onOpenChange }: OrderDetailDi
                         <Printer className="mr-2 h-4 w-4" />
                         Imprimir Label
                     </Button>
-                    <DialogClose asChild>
-                      <Button variant="ghost" size="icon">
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </DialogClose>
+
+                    {isClient && (
+                      <>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="outline" size="sm" disabled={order.status !== 'Generado'}>
+                              <Ban className="mr-2 h-4 w-4" />
+                              Anular Pedido
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>¿Estás seguro que deseas anular este pedido?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Esta acción no se puede deshacer.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction onClick={handleAnular} className="bg-destructive hover:bg-destructive/90">Confirmar Anulación</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                        
+                        <Button variant="outline" size="sm">
+                          <Copy className="mr-2 h-4 w-4" />
+                          Duplicar Pedido
+                        </Button>
+                      </>
+                    )}
                 </div>
               </div>
-              <TabsList className="grid w-full grid-cols-3 mt-4">
+              <TabsList className="grid w-full grid-cols-4 mt-4">
                 <TabsTrigger value="details">Detalle</TabsTrigger>
                 <TabsTrigger value="comments">Comentarios</TabsTrigger>
+                <TabsTrigger value="novelty">Gestión de Novedades</TabsTrigger>
                 <TabsTrigger value="history">Historial</TabsTrigger>
               </TabsList>
             </DialogHeader>
@@ -59,6 +106,9 @@ export default function OrderDetailDialog({ order, onOpenChange }: OrderDetailDi
               </TabsContent>
               <TabsContent value="comments" className="mt-0">
                 <OrderCommentsTab order={order} />
+              </TabsContent>
+              <TabsContent value="novelty" className="mt-0">
+                <OrderNoveltyTab order={order} />
               </TabsContent>
               <TabsContent value="history" className="mt-0">
                 <OrderTimelineTab order={order} />

@@ -1,10 +1,12 @@
 import React from 'react';
-import type { Order, OrderStatus, ProductLineItem } from '@/lib/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import type { Order, OrderStatus } from '@/lib/types';
+import { useAuth } from '@/context/auth-context';
+import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '../ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
+import { CreateNoveltyDialog } from './CreateNoveltyDialog';
 
 interface OrderDetailsTabProps {
   order: Order;
@@ -23,7 +25,7 @@ const DetailItem = ({ label, value }: { label: string; value?: React.ReactNode }
     </div>
 );
 
-const ProductsTable = ({ products }: { products: ProductLineItem[] }) => (
+const ProductsTable = ({ products }: { products: { id: string; name: string; sku: string; quantity: number; declaredValue: number; }[] }) => (
     <Table>
         <TableHeader>
             <TableRow>
@@ -47,10 +49,35 @@ const ProductsTable = ({ products }: { products: ProductLineItem[] }) => (
 )
 
 export default function OrderDetailsTab({ order }: OrderDetailsTabProps) {
+  const { user } = useAuth();
+  const isClient = user?.role === 'client';
   const [currentStatus, setCurrentStatus] = React.useState<OrderStatus>(order.status);
+  const [isNoveltyDialogOpen, setIsNoveltyDialogOpen] = React.useState(false);
   const isStatusGenerated = order.status === 'Generado';
 
+  const handleStatusChange = (newStatus: OrderStatus) => {
+    if (newStatus === 'Novedad' && !isClient) {
+        setIsNoveltyDialogOpen(true);
+    } else {
+        setCurrentStatus(newStatus);
+        // API call to update status would go here
+    }
+  }
+
+  const handleNoveltySubmit = ({ comment, photo }: { comment: string, photo: File }) => {
+    console.log("Submitting novelty:", { comment, photo });
+    setCurrentStatus('Novedad');
+    // API call to update status with novelty data would go here
+    setIsNoveltyDialogOpen(false);
+  }
+
   return (
+    <>
+    <CreateNoveltyDialog 
+        isOpen={isNoveltyDialogOpen} 
+        onOpenChange={setIsNoveltyDialogOpen}
+        onSubmit={handleNoveltySubmit}
+    />
     <Card>
         <CardContent className="space-y-6 pt-6">
             {/* Información del Pedido */}
@@ -62,22 +89,26 @@ export default function OrderDetailsTab({ order }: OrderDetailsTabProps) {
                     <DetailItem label="Tienda (Cliente)" value={order.client} />
                     <div className="flex flex-col">
                         <p className="text-sm text-muted-foreground">Estado</p>
-                        <Select value={currentStatus} onValueChange={(v) => setCurrentStatus(v as OrderStatus)}>
-                            <SelectTrigger className="w-[180px] mt-1">
-                                <SelectValue placeholder="Cambiar estado" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {allStatuses.map(status => (
-                                    <SelectItem 
-                                        key={status} 
-                                        value={status} 
-                                        disabled={status === 'Generado' && !isStatusGenerated}
-                                    >
-                                        {status}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                        {isClient ? (
+                             <Badge className="mt-1 w-fit">{currentStatus}</Badge>
+                        ) : (
+                            <Select value={currentStatus} onValueChange={(v) => handleStatusChange(v as OrderStatus)}>
+                                <SelectTrigger className="w-[180px] mt-1">
+                                    <SelectValue placeholder="Cambiar estado" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {allStatuses.map(status => (
+                                        <SelectItem 
+                                            key={status} 
+                                            value={status} 
+                                            disabled={status === 'Generado' && !isStatusGenerated}
+                                        >
+                                            {status}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        )}
                     </div>
                     <DetailItem label="Mensajero Asignado" value={order.assignedCourierName} />
                     <DetailItem label="Tipo de Pago" value={order.paymentType} />
@@ -143,11 +174,12 @@ export default function OrderDetailsTab({ order }: OrderDetailsTabProps) {
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
                     <DetailItem label="Estado de Empaque" value={order.estadoDeEmpaque} />
                     <DetailItem label="Ubicación Principal" value={order.location} />
-                    <DetailItem label="Sub-Ubicación" value={order.subLocation} />
+                    {!isClient && <DetailItem label="Sub-Ubicación" value={order.subLocation} />}
                 </div>
             </div>
             
         </CardContent>
     </Card>
+    </>
   );
 }

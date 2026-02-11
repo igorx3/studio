@@ -127,6 +127,7 @@ export interface OrderEvent {
   from?: string;
   to?: string;
   comment?: string;
+  photoUrl?: string; // For novelty evidence
   subLocation?: SubLocation;
 }
 
