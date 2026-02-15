@@ -18,15 +18,9 @@ import {FirestorePermissionError} from '@/firebase/errors';
  */
 export function setDocumentNonBlocking(docRef: DocumentReference, data: any, options: SetOptions) {
   setDoc(docRef, data, options).catch(error => {
-    errorEmitter.emit(
-      'permission-error',
-      new FirestorePermissionError({
-        path: docRef.path,
-        operation: 'write', // or 'create'/'update' based on options
-        requestResourceData: data,
-      })
-    )
-  })
+    // As per your instruction, I'm disabling the custom FirestorePermissionError.
+    console.error(`setDocumentNonBlocking failed for path: ${docRef.path}`, error);
+  });
   // Execution continues immediately
 }
 
@@ -39,14 +33,8 @@ export function setDocumentNonBlocking(docRef: DocumentReference, data: any, opt
 export function addDocumentNonBlocking(colRef: CollectionReference, data: any) {
   const promise = addDoc(colRef, data)
     .catch(error => {
-      errorEmitter.emit(
-        'permission-error',
-        new FirestorePermissionError({
-          path: colRef.path,
-          operation: 'create',
-          requestResourceData: data,
-        })
-      )
+      // As per your instruction, I'm disabling the custom FirestorePermissionError.
+      console.error(`addDocumentNonBlocking failed for path: ${colRef.path}`, error);
     });
   return promise;
 }
@@ -59,14 +47,8 @@ export function addDocumentNonBlocking(colRef: CollectionReference, data: any) {
 export function updateDocumentNonBlocking(docRef: DocumentReference, data: any) {
   updateDoc(docRef, data)
     .catch(error => {
-      errorEmitter.emit(
-        'permission-error',
-        new FirestorePermissionError({
-          path: docRef.path,
-          operation: 'update',
-          requestResourceData: data,
-        })
-      )
+      // As per your instruction, I'm disabling the custom FirestorePermissionError.
+      console.error(`updateDocumentNonBlocking failed for path: ${docRef.path}`, error);
     });
 }
 
@@ -78,12 +60,7 @@ export function updateDocumentNonBlocking(docRef: DocumentReference, data: any) 
 export function deleteDocumentNonBlocking(docRef: DocumentReference) {
   deleteDoc(docRef)
     .catch(error => {
-      errorEmitter.emit(
-        'permission-error',
-        new FirestorePermissionError({
-          path: docRef.path,
-          operation: 'delete',
-        })
-      )
+      // As per your instruction, I'm disabling the custom FirestorePermissionError.
+      console.error(`deleteDocumentNonBlocking failed for path: ${docRef.path}`, error);
     });
 }
