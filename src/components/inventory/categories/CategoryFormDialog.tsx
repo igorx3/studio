@@ -50,7 +50,7 @@ export function CategoryFormDialog({ isOpen, onOpenChange, category }: { isOpen:
   }, [category, isOpen, form]);
 
   const onSubmit = async (values: FormData) => {
-    if (!firestore || !user) return;
+    if (!firestore) return;
     setIsSubmitting(true);
     
     try {
