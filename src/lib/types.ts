@@ -235,8 +235,8 @@ export interface InventoryItem {
   photos: string[];
   
   cost?: number; // Admin only, populated from private subcollection
-  minSalePrice: number;
-  normalPrice: number;
+  minSalePrice?: number;
+  normalPrice?: number;
 
   initialStock: number;
   stockAvailable: number;

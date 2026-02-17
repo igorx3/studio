@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import type { ArticleCategory } from '@/lib/types';
 import { useAuth } from '@/context/auth-context';
-import { FirebaseContext } from '@/firebase/context';
+import { useFirestore } from '@/firebase/provider';
 import { collection, addDoc, serverTimestamp, doc, setDoc, updateDoc } from 'firebase/firestore';
 
 const formSchema = z.object({
@@ -27,7 +27,7 @@ type FormData = z.infer<typeof formSchema>;
 
 export function CategoryFormDialog({ isOpen, onOpenChange, category }: { isOpen: boolean, onOpenChange: (open: boolean) => void, category?: ArticleCategory | null }) {
   const { user } = useAuth();
-  const { firestore } = useContext(FirebaseContext);
+  const firestore = useFirestore();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 

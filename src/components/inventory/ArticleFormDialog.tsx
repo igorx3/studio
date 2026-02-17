@@ -22,25 +22,36 @@ import { Switch } from '../ui/switch';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
 import { cn } from '@/lib/utils';
 import { useMemo } from 'react';
+import { validateArticlePricing } from '@/lib/validation/article-validation';
 
 
 const packageLocations: PackageLocation[] = ['alistamiento', 'despacho', 'recepcion', 'en_ruta'];
 const warehouseSubLocations: WarehouseSubLocation[] = ['Q1', 'Q2', 'K1', 'K2', 'P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'P9', 'P10', 'P11', 'P12'];
 
+// Preprocessor: convierte string vacío / null / undefined → undefined, de lo contrario parsea número
+const optionalPositiveNumber = z.preprocess(
+  (val) => {
+    if (val === '' || val === undefined || val === null) return undefined;
+    const num = Number(val);
+    return isNaN(num) ? undefined : num;
+  },
+  z.number().min(0, 'El valor no puede ser negativo.').optional()
+);
+
 const formSchema = z.object({
   name: z.string().min(3, 'El nombre debe tener al menos 3 caracteres.'),
   sku: z.string().min(1, 'El SKU es obligatorio.'),
   storeId: z.string().min(1, 'Debes seleccionar una tienda.'),
-  
-  cost: z.coerce.number().min(0, 'El costo debe ser positivo.'),
-  minSalePrice: z.coerce.number().min(0, 'El precio mínimo debe ser positivo.'),
-  normalPrice: z.coerce.number().min(0, 'La tarifa debe ser positiva.'),
-  
+
+  cost: optionalPositiveNumber,
+  minSalePrice: optionalPositiveNumber,
+  normalPrice: optionalPositiveNumber,
+
   initialStock: z.coerce.number().int().min(0, 'El stock debe ser un número entero positivo.'),
   stockAvailable: z.coerce.number().int().min(0, 'El stock debe ser un número entero positivo.'),
   minStock: z.coerce.number().int().min(0, 'El stock mínimo debe ser un número entero positivo.'),
   idealStock: z.coerce.number().int().min(0, 'El stock ideal debe ser un número entero positivo.'),
-  
+
   categoryId: z.string().optional(),
   description: z.string().optional(),
   barcode: z.string().optional(),
@@ -52,7 +63,7 @@ const formSchema = z.object({
   height: z.coerce.number().optional(),
   expirationDate: z.string().optional(),
   photos: z.any().optional(),
-  
+
   dropshippingEnabled: z.boolean().default(false),
   dropshippingMinPrice: z.coerce.number().optional(),
   dropshippingSuggestedPrice: z.coerce.number().optional(),
@@ -61,15 +72,42 @@ const formSchema = z.object({
   dropshippingDescription: z.string().optional(),
   dropshippingCategory: z.string().optional(),
 
-}).refine(data => data.idealStock > data.minStock, {
-    message: "El stock ideal debe ser mayor que el stock mínimo.",
-    path: ["idealStock"],
-}).refine(data => data.minSalePrice > data.cost, {
-    message: "El precio mínimo debe ser mayor que el costo.",
-    path: ["minSalePrice"],
-}).refine(data => data.normalPrice > data.minSalePrice, {
-    message: "La tarifa normal debe ser mayor que el precio mínimo.",
-    path: ["normalPrice"],
+}).superRefine((data, ctx) => {
+  // Stock: idealStock debe ser mayor que minStock
+  if (data.idealStock <= data.minStock) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'El stock ideal debe ser mayor que el stock mínimo.',
+      path: ['idealStock'],
+    });
+  }
+
+  // Dropshipping ON → precios obligatorios
+  if (data.dropshippingEnabled) {
+    if (data.minSalePrice == null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'El precio mínimo de venta es obligatorio cuando dropshipping está habilitado.',
+        path: ['minSalePrice'],
+      });
+    }
+    if (data.normalPrice == null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'La tarifa normal es obligatoria cuando dropshipping está habilitado.',
+        path: ['normalPrice'],
+      });
+    }
+  }
+
+  // Permite igualdad: minSalePrice <= normalPrice (bloquea si mínimo > normal)
+  if (data.minSalePrice != null && data.normalPrice != null && data.minSalePrice > data.normalPrice) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'El precio mínimo no puede ser mayor que la tarifa normal.',
+      path: ['minSalePrice'],
+    });
+  }
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -96,7 +134,11 @@ export function ArticleFormDialog({ isOpen, onOpenChange, article, stores }: { i
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
-    defaultValues: { minStock: 10, idealStock: 20, cost: 0, minSalePrice: 0, normalPrice: 0, stockAvailable: 0, initialStock: 0 }
+    defaultValues: {
+      minStock: 10, idealStock: 20,
+      cost: undefined, minSalePrice: undefined, normalPrice: undefined,
+      stockAvailable: 0, initialStock: 0,
+    }
   });
 
   const isAdmin = user?.role === 'admin' || user?.role === 'operations';
@@ -120,9 +162,9 @@ export function ArticleFormDialog({ isOpen, onOpenChange, article, stores }: { i
           name: article.name,
           sku: article.sku,
           storeId: article.storeId,
-          
-          normalPrice: article.normalPrice,
-          minSalePrice: article.minSalePrice,
+
+          normalPrice: article.normalPrice ?? undefined,
+          minSalePrice: article.minSalePrice ?? undefined,
 
           initialStock: article.initialStock,
           stockAvailable: article.stockAvailable,
@@ -138,7 +180,7 @@ export function ArticleFormDialog({ isOpen, onOpenChange, article, stores }: { i
           width: article.dimensions?.width,
           height: article.dimensions?.height,
           expirationDate: article.expirationDate && (article.expirationDate as any).seconds ? new Date((article.expirationDate as any).seconds * 1000).toISOString().split('T')[0] : '',
-          
+
           dropshippingEnabled: article.dropshipping?.enabled || false,
           dropshippingMinPrice: article.dropshipping?.minPrice,
           dropshippingSuggestedPrice: article.dropshipping?.suggestedPrice,
@@ -151,7 +193,9 @@ export function ArticleFormDialog({ isOpen, onOpenChange, article, stores }: { i
         setIsDropshippingOpen(article.dropshipping?.enabled || false);
       } else {
         form.reset({
-          name: '', sku: '', storeId: '', normalPrice: 0, minSalePrice: 0, cost: 0, initialStock: 0, stockAvailable: 0,
+          name: '', sku: '', storeId: '',
+          normalPrice: undefined, minSalePrice: undefined, cost: undefined,
+          initialStock: 0, stockAvailable: 0,
           minStock: 10, idealStock: 20, categoryId: '', description: '', barcode: '',
           packageLocation: 'recepcion', warehouseSubLocation: undefined, weight: 0, length: 0, width: 0, height: 0,
           expirationDate: '', photos: undefined,
@@ -178,19 +222,36 @@ export function ArticleFormDialog({ isOpen, onOpenChange, article, stores }: { i
       setPreviewImages(prev => [...prev, ...newPreviews]);
     }
   };
-  
+
   const onSubmit = async (values: FormData) => {
-    if (!firestore || !storage || !user) {
+    console.log('[ArticleForm] onSubmit called', { hasFirestore: !!firestore, hasStorage: !!storage, hasUser: !!user });
+
+    if (!firestore || !storage) {
         toast({ variant: "destructive", title: "Error", description: "La conexión con la base de datos no está disponible." });
         return;
     }
+
+    // Validación backend (defensa en profundidad)
+    const pricingValidation = validateArticlePricing({
+      dropshippingEnabled: values.dropshippingEnabled,
+      cost: values.cost,
+      minSalePrice: values.minSalePrice,
+      normalPrice: values.normalPrice,
+    });
+    if (!pricingValidation.valid) {
+      console.warn('[ArticleForm] Backend validation failed', pricingValidation.errors);
+      const firstError = pricingValidation.errors[0];
+      toast({ variant: "destructive", title: "Error de validación", description: firstError.message });
+      return;
+    }
+
     setIsSubmitting(true);
-    
+
     try {
         const storeName = stores.find(s => s.id === values.storeId)?.name || 'N/A';
         const isNewArticle = !article;
         const articleId = isNewArticle ? doc(collection(firestore, 'id_generator')).id : article.id!;
-        
+
         if (isNewArticle || (article && article.sku !== values.sku)) {
             const skuQuery = query(collection(firestore, 'inventory'), where('storeId', '==', values.storeId), where('sku', '==', values.sku));
             const skuSnapshot = await getDocs(skuQuery);
@@ -200,7 +261,7 @@ export function ArticleFormDialog({ isOpen, onOpenChange, article, stores }: { i
                 return;
             }
         }
-        
+
         let photoUrls = article?.photos || [];
         if (newImageFiles.length > 0) {
             const uploadPromises = newImageFiles.map(file => {
@@ -216,10 +277,10 @@ export function ArticleFormDialog({ isOpen, onOpenChange, article, stores }: { i
             sku: values.sku,
             storeId: values.storeId,
             storeName,
-            
-            normalPrice: values.normalPrice,
-            minSalePrice: values.minSalePrice,
-            cost: values.cost,
+
+            normalPrice: values.normalPrice ?? 0,
+            minSalePrice: values.minSalePrice ?? 0,
+            cost: values.cost ?? 0,
 
             initialStock: isNewArticle ? values.initialStock : article!.initialStock,
             stockAvailable: isNewArticle ? values.initialStock : article!.stockAvailable,
@@ -234,8 +295,8 @@ export function ArticleFormDialog({ isOpen, onOpenChange, article, stores }: { i
             category: values.categoryId || '',
             description: values.description,
             barcode: values.barcode,
-            packageLocation: values.packageLocation,
-            warehouseSubLocation: values.warehouseSubLocation,
+            packageLocation: values.packageLocation as PackageLocation | undefined,
+            warehouseSubLocation: values.warehouseSubLocation as WarehouseSubLocation | undefined,
             weight: values.weight || 0,
             status: 'active',
             dropshipping: {
@@ -250,12 +311,11 @@ export function ArticleFormDialog({ isOpen, onOpenChange, article, stores }: { i
             }
         };
 
-        const stockBefore = article?.stockAvailable ?? 0;
-        const stockAfter = isNewArticle ? values.initialStock : (values.stockAvailable === stockBefore ? stockBefore : values.stockAvailable);
+        console.log('[ArticleForm] Saving to Firestore', { articleId, isNewArticle });
 
         await runTransaction(firestore, async (transaction) => {
             const invRef = doc(firestore, 'inventory', articleId);
-            
+
             if (isNewArticle) {
                 transaction.set(invRef, { ...itemData, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
                 if (values.initialStock > 0) {
@@ -264,7 +324,7 @@ export function ArticleFormDialog({ isOpen, onOpenChange, article, stores }: { i
                         storeId: values.storeId, storeName, movementType: 'initial_stock',
                         referenceId: invRef.id, referenceType: 'item_creation',
                         quantity: values.initialStock, stockBefore: 0, stockAfter: values.initialStock,
-                        userId: user.uid, userName: user.name || 'N/A',
+                        userId: user?.uid || 'anonymous', userName: user?.name || 'N/A',
                         notes: 'Stock inicial al crear el artículo.',
                         createdAt: serverTimestamp()
                     };
@@ -272,12 +332,12 @@ export function ArticleFormDialog({ isOpen, onOpenChange, article, stores }: { i
                 }
             } else {
                  const currentItemSnap = await transaction.get(invRef);
-                 if(!currentItemSnap.exists()) throw new Error("Item does not exist");
+                 if(!currentItemSnap.exists()) throw new Error("El artículo no existe.");
                  const currentItemData = currentItemSnap.data() as InventoryItem;
 
                  const newStockAvailable = values.stockAvailable;
                  const newTotalStock = currentItemData.stockReserved + newStockAvailable;
-                 
+
                  transaction.update(invRef, { ...itemData, stockAvailable: newStockAvailable, stockTotal: newTotalStock, updatedAt: serverTimestamp() });
 
                  if(newStockAvailable !== currentItemData.stockAvailable) {
@@ -285,10 +345,10 @@ export function ArticleFormDialog({ isOpen, onOpenChange, article, stores }: { i
                         itemId: invRef.id, itemName: values.name, itemSku: values.sku,
                         storeId: values.storeId, storeName, movementType: 'adjustment',
                         referenceId: invRef.id, referenceType: 'adjustment',
-                        quantity: newStockAvailable - currentItemData.stockAvailable, 
-                        stockBefore: currentItemData.stockAvailable, 
+                        quantity: newStockAvailable - currentItemData.stockAvailable,
+                        stockBefore: currentItemData.stockAvailable,
                         stockAfter: newStockAvailable,
-                        userId: user.uid, userName: user.name || 'N/A',
+                        userId: user?.uid || 'anonymous', userName: user?.name || 'N/A',
                         notes: 'Ajuste manual desde edición de artículo.',
                         createdAt: serverTimestamp()
                     };
@@ -298,15 +358,16 @@ export function ArticleFormDialog({ isOpen, onOpenChange, article, stores }: { i
 
             if (isAdmin) {
                 const privateRef = doc(firestore, 'inventory', articleId, 'private', 'pricing');
-                transaction.set(privateRef, { cost: values.cost || 0 });
+                transaction.set(privateRef, { cost: values.cost ?? 0 });
             }
         });
-        
+
+        console.log('[ArticleForm] Save successful', { articleId });
         toast({ title: isNewArticle ? "Artículo Creado" : "Artículo Actualizado", description: `${values.name} ha sido guardado.` });
         onOpenChange(false);
     } catch (error: any) {
-        console.error("Error saving article:", error);
-        toast({ variant: "destructive", title: "Error", description: error.message || "No se pudo guardar el artículo." });
+        console.error("[ArticleForm] Error saving article:", error);
+        toast({ variant: "destructive", title: "Error al guardar", description: error.message || "No se pudo guardar el artículo. Intenta de nuevo." });
     } finally {
         setIsSubmitting(false);
     }
@@ -376,35 +437,35 @@ export function ArticleFormDialog({ isOpen, onOpenChange, article, stores }: { i
 
              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                 {isAdmin && <FormField control={form.control} name="cost" render={({ field }) => (
-                    <FormItem><FormLabel>Costo del Producto (RD$)*</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Costo del Producto (RD$)</FormLabel><FormControl><Input type="number" step="any" min="0" placeholder="Opcional" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                 )} />}
                 <FormField control={form.control} name="minSalePrice" render={({ field }) => (
-                    <FormItem><FormLabel>Precio Mínimo Venta (RD$)*</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>{`Precio Mínimo Venta (RD$)${dropshippingEnabled ? '*' : ''}`}</FormLabel><FormControl><Input type="number" step="any" min="0" placeholder={dropshippingEnabled ? 'Obligatorio' : 'Opcional'} {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="normalPrice" render={({ field }) => (
-                    <FormItem><FormLabel>Tarifa Normal (RD$)*</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>{`Tarifa Normal (RD$)${dropshippingEnabled ? '*' : ''}`}</FormLabel><FormControl><Input type="number" step="any" min="0" placeholder={dropshippingEnabled ? 'Obligatorio' : 'Opcional'} {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                 )} />
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-end">
                  {article ? (
                     <FormField control={form.control} name="stockAvailable" render={({ field }) => (
-                        <FormItem><FormLabel>Stock Disponible*</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Stock Disponible*</FormLabel><FormControl><Input type="number" step="1" min="0" {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
                 ) : (
                     <FormField control={form.control} name="initialStock" render={({ field }) => (
-                        <FormItem><FormLabel>Stock Inicial*</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Stock Inicial*</FormLabel><FormControl><Input type="number" step="1" min="0" {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
                 )}
                  {article && <FormField control={form.control} name="initialStock" render={({ field }) => (
                     <FormItem><FormLabel>Stock Inicial</FormLabel><FormControl><Input type="number" {...field} disabled /></FormControl></FormItem>
                 )} />}
-                
+
                 <FormField control={form.control} name="minStock" render={({ field }) => (
-                    <FormItem><FormLabel>Stock Mínimo*</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Stock Mínimo*</FormLabel><FormControl><Input type="number" step="1" min="0" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="idealStock" render={({ field }) => (
-                    <FormItem><FormLabel>Stock Ideal*</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Stock Ideal*</FormLabel><FormControl><Input type="number" step="1" min="0" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
             </div>
 
@@ -424,7 +485,7 @@ export function ArticleFormDialog({ isOpen, onOpenChange, article, stores }: { i
                         </Select><FormMessage /></FormItem>
                  )} />}
                 <FormField control={form.control} name="weight" render={({ field }) => (
-                    <FormItem><FormLabel>Peso (g)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Peso (g)</FormLabel><FormControl><Input type="number" step="any" min="0" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                  <FormField control={form.control} name="expirationDate" render={({ field }) => (
                     <FormItem><FormLabel>Fecha Vencimiento</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
@@ -452,10 +513,10 @@ export function ArticleFormDialog({ isOpen, onOpenChange, article, stores }: { i
                             <div className="space-y-4 p-2">
                                 <div className="grid grid-cols-2 gap-4">
                                     <FormField control={form.control} name="dropshippingMinPrice" render={({ field }) => (
-                                        <FormItem><FormLabel>Precio Mínimo de Venta</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                                        <FormItem><FormLabel>Precio Mínimo de Venta</FormLabel><FormControl><Input type="number" step="any" min="0" {...field} /></FormControl><FormMessage /></FormItem>
                                     )} />
                                      <FormField control={form.control} name="dropshippingSuggestedPrice" render={({ field }) => (
-                                        <FormItem><FormLabel>Precio de Venta Sugerido</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                                        <FormItem><FormLabel>Precio de Venta Sugerido</FormLabel><FormControl><Input type="number" step="any" min="0" {...field} /></FormControl><FormMessage /></FormItem>
                                     )} />
                                 </div>
                                  <FormField control={form.control} name="dropshippingDescription" render={({ field }) => (
