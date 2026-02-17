@@ -23,7 +23,7 @@ export function InventoryDashboard({ items }: InventoryDashboardProps) {
         };
     }
 
-    const totalValue = items.reduce((sum, item) => sum + (item.normalPrice * item.stockTotal), 0);
+    const totalValue = items.reduce((sum, item) => sum + ((item.normalPrice ?? 0) * item.stockTotal), 0);
     const totalSkus = items.length;
     const totalUnits = items.reduce((sum, item) => sum + item.stockTotal, 0);
     

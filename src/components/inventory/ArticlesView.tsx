@@ -122,7 +122,7 @@ export function ArticlesView({ items, stores }: ArticlesViewProps) {
                                         {user?.role !== 'client' && <TableCell>{item.storeName}</TableCell>}
                                         <TableCell className={cn("font-bold", status.textClass)}>{item.stockAvailable}</TableCell>
                                         <TableCell>{item.stockReserved}</TableCell>
-                                        <TableCell>${item.normalPrice.toLocaleString()}</TableCell>
+                                        <TableCell>${(item.normalPrice ?? 0).toLocaleString()}</TableCell>
                                         {isAdmin && <TableCell>{item.warehouseSubLocation}</TableCell>}
                                         <TableCell>
                                             <Badge variant={status.badgeVariant}>{status.label}</Badge>
