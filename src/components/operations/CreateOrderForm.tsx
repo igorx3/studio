@@ -33,22 +33,24 @@ interface CreateOrderFormProps {
   onOrderCreated: (order: Order) => void;
 }
 
+type ProductType = 'inventariado' | 'personalizado';
+
 interface ProductRow {
-  itemId: string | 'custom';
+  type: ProductType;
+  itemId: string;
   name: string;
   sku: string;
   quantity: number;
   price: number;
-  isCustom: boolean;
 }
 
 const emptyProduct: ProductRow = {
-  itemId: 'custom',
+  type: 'personalizado',
+  itemId: '',
   name: '',
   sku: '',
   quantity: 1,
   price: 0,
-  isCustom: true,
 };
 
 export default function CreateOrderForm({ open, onOpenChange, onOrderCreated }: CreateOrderFormProps) {
@@ -125,16 +127,20 @@ export default function CreateOrderForm({ open, onOpenChange, onOrderCreated }: 
     setProducts(updated);
   };
 
-  const handleProductSelect = (index: number, inventoryItemId: string) => {
+  const handleProductTypeChange = (index: number, type: ProductType) => {
     setProducts(prev => {
       const updated = [...prev];
-      if (inventoryItemId === 'custom') {
-        updated[index] = { ...updated[index], itemId: 'custom', isCustom: true, name: '', sku: '', price: 0 };
-      } else {
-        const item = inventoryItems.find(i => i.id === inventoryItemId);
-        if (item) {
-          updated[index] = { ...updated[index], itemId: inventoryItemId, isCustom: false, name: item.name, sku: item.sku, price: item.normalPrice || 0 };
-        }
+      updated[index] = { ...emptyProduct, type, quantity: updated[index].quantity };
+      return updated;
+    });
+  };
+
+  const handleInventoryItemSelect = (index: number, inventoryItemId: string) => {
+    setProducts(prev => {
+      const updated = [...prev];
+      const item = inventoryItems.find(i => i.id === inventoryItemId);
+      if (item) {
+        updated[index] = { ...updated[index], itemId: inventoryItemId, name: item.name, sku: item.sku, price: item.normalPrice || 0 };
       }
       return updated;
     });
@@ -148,7 +154,7 @@ export default function CreateOrderForm({ open, onOpenChange, onOrderCreated }: 
     recipientPhone.trim() &&
     recipientCity.trim() &&
     recipientAddress.trim() &&
-    products.some(p => p.name.trim() && p.quantity > 0 && p.price > 0) &&
+    products.some(p => p.name.trim() && p.quantity > 0) &&
     (paymentType === 'prepaid' || (paymentType === 'cod' && Number(codAmount) > 0));
 
   const handleSubmit = () => {
@@ -160,7 +166,7 @@ export default function CreateOrderForm({ open, onOpenChange, onOrderCreated }: 
       .map((p, i) => ({
         itemId: p.itemId || `new-${Date.now()}-${i}`,
         name: p.name,
-        sku: p.sku || `SKU-${Date.now()}-${i}`,
+        sku: p.sku || (p.type === 'personalizado' ? `CUSTOM-${Date.now()}-${i}` : ''),
         quantity: p.quantity,
         price: p.price,
       }));
@@ -377,33 +383,43 @@ export default function CreateOrderForm({ open, onOpenChange, onOrderCreated }: 
             ) : (
               <div className="space-y-3">
                 {products.map((product, index) => (
-                  <div key={index} className="grid grid-cols-[auto_1fr_auto_auto_auto_auto] gap-2 items-end">
-                    <div className="space-y-1 w-48">
-                      {index === 0 && <Label className="text-xs">Producto *</Label>}
-                      <Select value={product.itemId} onValueChange={(v) => handleProductSelect(index, v)}>
+                  <div key={index} className="grid grid-cols-[140px_1fr_70px_100px_40px] gap-2 items-end">
+                    <div className="space-y-1">
+                      {index === 0 && <Label className="text-xs">Tipo de Producto *</Label>}
+                      <Select value={product.type} onValueChange={(v) => handleProductTypeChange(index, v as ProductType)}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Seleccionar..." />
+                          <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="custom">+ Personalizado</SelectItem>
-                          {inventoryItems.map(item => (
-                            <SelectItem key={item.id} value={item.id}>
-                              {item.name} ({item.stockAvailable} disponibles)
-                            </SelectItem>
-                          ))}
+                          <SelectItem value="inventariado">Inventariado</SelectItem>
+                          <SelectItem value="personalizado">Personalizado</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-1 flex-1">
+                    <div className="space-y-1">
                       {index === 0 && <Label className="text-xs">Nombre *</Label>}
-                      <Input
-                        placeholder="Nombre del producto"
-                        value={product.name}
-                        onChange={(e) => updateProduct(index, 'name', e.target.value)}
-                        disabled={!product.isCustom}
-                      />
+                      {product.type === 'inventariado' ? (
+                        <Select value={product.itemId} onValueChange={(v) => handleInventoryItemSelect(index, v)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar producto..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {inventoryItems.map(item => (
+                              <SelectItem key={item.id} value={item.id}>
+                                {item.name} ({item.stockAvailable} disp.)
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input
+                          placeholder="Nombre del producto"
+                          value={product.name}
+                          onChange={(e) => updateProduct(index, 'name', e.target.value)}
+                        />
+                      )}
                     </div>
-                    <div className="space-y-1 w-20">
+                    <div className="space-y-1">
                       {index === 0 && <Label className="text-xs">Cant. *</Label>}
                       <Input
                         type="number"
@@ -412,15 +428,14 @@ export default function CreateOrderForm({ open, onOpenChange, onOrderCreated }: 
                         onChange={(e) => updateProduct(index, 'quantity', parseInt(e.target.value) || 1)}
                       />
                     </div>
-                    <div className="space-y-1 w-24">
-                      {index === 0 && <Label className="text-xs">Precio (RD$) *</Label>}
+                    <div className="space-y-1">
+                      {index === 0 && <Label className="text-xs">Precio (RD$)</Label>}
                       <Input
                         type="number"
                         min="0"
                         placeholder="0.00"
                         value={product.price || ''}
                         onChange={(e) => updateProduct(index, 'price', parseFloat(e.target.value) || 0)}
-                        disabled={!product.isCustom}
                       />
                     </div>
                     <Button
