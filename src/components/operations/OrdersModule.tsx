@@ -24,6 +24,7 @@ export function OrdersModule() {
   const [activeSubMenu, setActiveSubMenu] = useState<string>('Todos');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [duplicateSource, setDuplicateSource] = useState<Order | null>(null);
   const [orders, setOrders] = useState<Order[]>(mockOrders);
 
   const filteredOrders = useMemo(() => {
@@ -51,35 +52,9 @@ export function OrdersModule() {
   };
 
   const handleDuplicateOrder = (source: Order) => {
-    const now = new Date().toISOString();
-    const trackingId = `POD${String(Date.now()).slice(-4)}`;
-    const duplicated: Order = {
-      ...source,
-      id: `dup-${Date.now()}`,
-      trackingId,
-      externalOrderReference: trackingId,
-      status: 'Generado',
-      previousStatus: undefined,
-      estadoDeEmpaque: 'Pendiente',
-      warehouse: { packingStatus: 'pending' },
-      location: 'Recepción',
-      comments: [],
-      history: [{
-        id: `hist-${Date.now()}`,
-        eventType: 'Status Change',
-        user: { name: 'Sistema' },
-        createdAt: now,
-        from: 'Nuevo',
-        to: 'Generado',
-        comment: `Duplicado de ${source.externalOrderReference || source.trackingId}`,
-      }],
-      createdAt: now,
-      updatedAt: now,
-      collectedFromCourier: false,
-      financials: source.financials ? { ...source.financials, collectedFromCourier: false } : undefined,
-    };
-    setOrders(prev => [duplicated, ...prev]);
     setSelectedOrder(null);
+    setDuplicateSource(source);
+    setShowCreateForm(true);
   };
 
   return (
@@ -152,8 +127,12 @@ export function OrdersModule() {
 
         <CreateOrderForm
             open={showCreateForm}
-            onOpenChange={setShowCreateForm}
+            onOpenChange={(open) => {
+                setShowCreateForm(open);
+                if (!open) setDuplicateSource(null);
+            }}
             onOrderCreated={handleOrderCreated}
+            initialData={duplicateSource}
         />
     </div>
   );
