@@ -1,11 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import type { Order, OrderEvent } from '@/lib/types';
 import { useAuth } from '@/context/auth-context';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, MessageSquare, Pencil, Ban } from 'lucide-react';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Calendar, Pencil, Ban } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,7 +24,7 @@ interface OrderNoveltyTabProps {
   onOrderUpdate: (order: Order) => void;
 }
 
-const NoveltyTimelineItem = ({ novelty }: { novelty: OrderEvent }) => (
+const NoveltyTimelineItem = ({ novelty, onImageClick }: { novelty: OrderEvent; onImageClick: (src: string) => void }) => (
     <div className="relative pl-8">
         <div className="absolute left-0 top-0 flex h-full w-8 justify-center">
             <div className="h-full w-px bg-border"></div>
@@ -36,9 +37,12 @@ const NoveltyTimelineItem = ({ novelty }: { novelty: OrderEvent }) => (
             </CardHeader>
             <CardContent className="space-y-4">
                 {novelty.photoUrl && (
-                     <a href={novelty.photoUrl} target="_blank" rel="noopener noreferrer">
-                        <img src={novelty.photoUrl} alt="Prueba de novedad" className="rounded-md border max-h-60" />
-                    </a>
+                    <img
+                      src={novelty.photoUrl}
+                      alt="Prueba de novedad"
+                      className="rounded-md border max-h-60 cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => onImageClick(novelty.photoUrl!)}
+                    />
                 )}
                 <blockquote className="border-l-2 pl-4 italic text-muted-foreground">"{novelty.comment}"</blockquote>
             </CardContent>
@@ -50,6 +54,7 @@ export default function OrderNoveltyTab({ order, onOrderUpdate }: OrderNoveltyTa
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   const isClient = user?.role === 'client';
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const noveltyEvents = order.history?.filter(h => h.to === 'Novedad').sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) || [];
 
@@ -105,6 +110,14 @@ export default function OrderNoveltyTab({ order, onOrderUpdate }: OrderNoveltyTa
 
   return (
     <div className="space-y-8">
+      <Dialog open={!!previewImage} onOpenChange={(open) => !open && setPreviewImage(null)}>
+        <DialogContent className="max-w-3xl p-2">
+          {previewImage && (
+            <img src={previewImage} alt="Vista previa" className="w-full h-auto rounded-md" />
+          )}
+        </DialogContent>
+      </Dialog>
+
       {(isClient || isAdmin) && isNoveltyActive && (
         <Card className="border-primary">
           <CardHeader>
@@ -138,7 +151,7 @@ export default function OrderNoveltyTab({ order, onOrderUpdate }: OrderNoveltyTa
         <div>
             <h3 className="text-lg font-semibold mb-4">Historial de Novedades</h3>
             <div className="space-y-4">
-                {noveltyEvents.map(event => <NoveltyTimelineItem key={event.id} novelty={event} />)}
+                {noveltyEvents.map(event => <NoveltyTimelineItem key={event.id} novelty={event} onImageClick={setPreviewImage} />)}
             </div>
         </div>
     </div>

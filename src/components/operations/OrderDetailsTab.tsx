@@ -86,9 +86,13 @@ export default function OrderDetailsTab({ order, onOrderUpdate }: OrderDetailsTa
     }
   }
 
-  const handleNoveltySubmit = ({ comment }: { comment: string, photo: File }) => {
-    applyStatusChange('Novedad', comment);
-    setIsNoveltyDialogOpen(false);
+  const handleNoveltySubmit = ({ comment, photo }: { comment: string, photo: File }) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      applyStatusChange('Novedad', comment, reader.result as string);
+      setIsNoveltyDialogOpen(false);
+    };
+    reader.readAsDataURL(photo);
   }
 
   return (

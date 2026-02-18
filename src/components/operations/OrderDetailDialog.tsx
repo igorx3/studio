@@ -27,9 +27,10 @@ interface OrderDetailDialogProps {
   order: Order | null;
   onOpenChange: (open: boolean) => void;
   onOrderUpdate: (order: Order) => void;
+  onDuplicateOrder: (order: Order) => void;
 }
 
-export default function OrderDetailDialog({ order, onOpenChange, onOrderUpdate }: OrderDetailDialogProps) {
+export default function OrderDetailDialog({ order, onOpenChange, onOrderUpdate, onDuplicateOrder }: OrderDetailDialogProps) {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   const isClient = user?.role === 'client';
@@ -100,7 +101,7 @@ export default function OrderDetailDialog({ order, onOpenChange, onOrderUpdate }
                           </AlertDialogContent>
                         </AlertDialog>
                         
-                        <Button variant="outline" size="sm">
+                        <Button variant="outline" size="sm" onClick={() => onDuplicateOrder(order)}>
                           <Copy className="mr-2 h-4 w-4" />
                           Duplicar Pedido
                         </Button>
