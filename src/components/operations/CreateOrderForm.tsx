@@ -168,7 +168,7 @@ export default function CreateOrderForm({ open, onOpenChange, onOrderCreated }: 
     const rates = selectedStore.rates;
     const freightCost = serviceType !== 'fulfillment' ? rates.freight : 0;
     const fulfillmentCost = serviceType !== 'logistics_180' ? rates.fulfillment : 0;
-    const serviceFee = rates.serviceFee;
+    const serviceFee = serviceType !== 'fulfillment' ? rates.serviceFee : 0;
     const totalCost = freightCost + fulfillmentCost + serviceFee;
     const cod = paymentType === 'cod' ? Number(codAmount) : 0;
 
@@ -477,17 +477,19 @@ export default function CreateOrderForm({ open, onOpenChange, onOrderCreated }: 
                       <span>RD$ {selectedStore.rates.fulfillment.toLocaleString()}</span>
                     </div>
                   )}
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Servicio</span>
-                    <span>RD$ {selectedStore.rates.serviceFee.toLocaleString()}</span>
-                  </div>
+                  {serviceType !== 'fulfillment' && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Servicio</span>
+                      <span>RD$ {selectedStore.rates.serviceFee.toLocaleString()}</span>
+                    </div>
+                  )}
                   <Separator className="my-1" />
                   <div className="flex justify-between font-medium">
                     <span>Total costos</span>
                     <span>RD$ {(
                       (serviceType !== 'fulfillment' ? selectedStore.rates.freight : 0) +
                       (serviceType !== 'logistics_180' ? selectedStore.rates.fulfillment : 0) +
-                      selectedStore.rates.serviceFee
+                      (serviceType !== 'fulfillment' ? selectedStore.rates.serviceFee : 0)
                     ).toLocaleString()}</span>
                   </div>
                 </div>
