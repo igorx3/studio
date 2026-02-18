@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import type { Order, OrderComment } from '@/lib/types';
 import { useAuth } from '@/context/auth-context';
 import { useForm } from 'react-hook-form';
@@ -14,6 +14,7 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from '@/component
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Separator } from '../ui/separator';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Paperclip } from 'lucide-react';
 
 interface OrderCommentsTabProps {
@@ -26,7 +27,20 @@ const commentSchema = z.object({
   files: z.any().optional(),
 });
 
-const Comment = ({ comment }: { comment: OrderComment }) => {
+function readFilesAsDataURLs(files: FileList): Promise<string[]> {
+  return Promise.all(
+    Array.from(files).map(
+      (file) =>
+        new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.readAsDataURL(file);
+        })
+    )
+  );
+}
+
+const Comment = ({ comment, onImageClick }: { comment: OrderComment; onImageClick: (src: string) => void }) => {
     const getInitials = (name: string) => {
         return name.split(' ').map(n => n[0]).join('').toUpperCase();
     };
@@ -46,9 +60,13 @@ const Comment = ({ comment }: { comment: OrderComment }) => {
                 {comment.photos && comment.photos.length > 0 && (
                     <div className="mt-2 flex gap-2 flex-wrap">
                         {comment.photos.map((photo, index) => (
-                            <a key={index} href={photo} target="_blank" rel="noopener noreferrer">
-                                <img src={photo} alt={`attachment ${index+1}`} className="h-20 w-20 object-cover rounded-md border" />
-                            </a>
+                            <img
+                              key={index}
+                              src={photo}
+                              alt={`attachment ${index+1}`}
+                              className="h-20 w-20 object-cover rounded-md border cursor-pointer hover:opacity-80 transition-opacity"
+                              onClick={() => onImageClick(photo)}
+                            />
                         ))}
                     </div>
                 )}
@@ -59,20 +77,26 @@ const Comment = ({ comment }: { comment: OrderComment }) => {
 
 export default function OrderCommentsTab({ order, onOrderUpdate }: OrderCommentsTabProps) {
   const { user } = useAuth();
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof commentSchema>>({
     resolver: zodResolver(commentSchema),
     defaultValues: { comment: '' },
   });
 
-  const onSubmit = (values: z.infer<typeof commentSchema>) => {
+  const onSubmit = async (values: z.infer<typeof commentSchema>) => {
     const now = new Date().toISOString();
+    let photos: string[] | undefined;
+    if (values.files && values.files.length > 0) {
+      photos = await readFilesAsDataURLs(values.files);
+    }
     const newComment: OrderComment = {
       id: `comment-${Date.now()}`,
       userName: user?.name || 'Usuario',
       user: { name: user?.name || 'Usuario', avatarUrl: user?.avatarUrl ?? undefined },
       createdAt: now,
       text: values.comment,
+      photos,
     };
     onOrderUpdate({
       ...order,
@@ -84,6 +108,14 @@ export default function OrderCommentsTab({ order, onOrderUpdate }: OrderComments
 
   return (
     <div className="space-y-6">
+      <Dialog open={!!previewImage} onOpenChange={(open) => !open && setPreviewImage(null)}>
+        <DialogContent className="max-w-3xl p-2">
+          {previewImage && (
+            <img src={previewImage} alt="Vista previa" className="w-full h-auto rounded-md" />
+          )}
+        </DialogContent>
+      </Dialog>
+
       <Card>
         <CardHeader>
             <CardTitle className='text-lg'>Agregar Comentario</CardTitle>
@@ -107,13 +139,20 @@ export default function OrderCommentsTab({ order, onOrderUpdate }: OrderComments
                 <FormField
                     control={form.control}
                     name="files"
-                    render={({ field }) => (
+                    render={({ field: { value, onChange, ...fieldProps } }) => (
                     <FormItem>
                         <Label>Fotos (opcional)</Label>
                         <FormControl>
                             <div className="relative">
                                 <Paperclip className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input type="file" multiple className="pl-10" {...field} />
+                                <Input
+                                  type="file"
+                                  multiple
+                                  accept="image/*"
+                                  className="pl-10"
+                                  onChange={(e) => onChange(e.target.files)}
+                                  {...fieldProps}
+                                />
                             </div>
                         </FormControl>
                         <FormMessage />
@@ -132,7 +171,7 @@ export default function OrderCommentsTab({ order, onOrderUpdate }: OrderComments
         <h3 className="text-lg font-semibold mb-4">Comentarios Anteriores</h3>
         <div className="space-y-6">
           {order.comments && order.comments.length > 0 ? (
-            order.comments.map((comment) => <Comment key={comment.id} comment={comment} />)
+            order.comments.map((comment) => <Comment key={comment.id} comment={comment} onImageClick={setPreviewImage} />)
           ) : (
             <p className="text-muted-foreground text-center py-8">No hay comentarios aún.</p>
           )}

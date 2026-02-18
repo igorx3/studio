@@ -50,6 +50,38 @@ export function OrdersModule() {
     setSelectedOrder(updatedOrder);
   };
 
+  const handleDuplicateOrder = (source: Order) => {
+    const now = new Date().toISOString();
+    const trackingId = `POD${String(Date.now()).slice(-4)}`;
+    const duplicated: Order = {
+      ...source,
+      id: `dup-${Date.now()}`,
+      trackingId,
+      externalOrderReference: trackingId,
+      status: 'Generado',
+      previousStatus: undefined,
+      estadoDeEmpaque: 'Pendiente',
+      warehouse: { packingStatus: 'pending' },
+      location: 'Recepción',
+      comments: [],
+      history: [{
+        id: `hist-${Date.now()}`,
+        eventType: 'Status Change',
+        user: { name: 'Sistema' },
+        createdAt: now,
+        from: 'Nuevo',
+        to: 'Generado',
+        comment: `Duplicado de ${source.externalOrderReference || source.trackingId}`,
+      }],
+      createdAt: now,
+      updatedAt: now,
+      collectedFromCourier: false,
+      financials: source.financials ? { ...source.financials, collectedFromCourier: false } : undefined,
+    };
+    setOrders(prev => [duplicated, ...prev]);
+    setSelectedOrder(null);
+  };
+
   return (
     <div className="flex flex-col h-full gap-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -115,6 +147,7 @@ export function OrdersModule() {
                 }
             }}
             onOrderUpdate={handleOrderUpdate}
+            onDuplicateOrder={handleDuplicateOrder}
         />
 
         <CreateOrderForm
