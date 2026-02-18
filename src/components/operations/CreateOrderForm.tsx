@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -31,6 +31,7 @@ interface CreateOrderFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onOrderCreated: (order: Order) => void;
+  initialData?: Order | null;
 }
 
 type ProductType = 'inventariado' | 'personalizado';
@@ -53,7 +54,7 @@ const emptyProduct: ProductRow = {
   price: 0,
 };
 
-export default function CreateOrderForm({ open, onOpenChange, onOrderCreated }: CreateOrderFormProps) {
+export default function CreateOrderForm({ open, onOpenChange, onOrderCreated, initialData }: CreateOrderFormProps) {
   const firestore = useFirestore();
   const { isUserLoading: isAuthLoading } = useUser();
   const { user } = useAuth();
@@ -69,6 +70,32 @@ export default function CreateOrderForm({ open, onOpenChange, onOrderCreated }: 
   const [recipientAddress, setRecipientAddress] = useState('');
   const [products, setProducts] = useState<ProductRow[]>([{ ...emptyProduct }]);
   const [notes, setNotes] = useState('');
+
+  // Pre-fill form when opening with initialData (duplicate)
+  useEffect(() => {
+    if (open && initialData) {
+      setStoreId(initialData.storeId);
+      setServiceType(initialData.serviceType);
+      setPaymentType(initialData.paymentType);
+      setCodAmount(initialData.codAmount ? String(initialData.codAmount) : '');
+      setRecipientName(initialData.recipient.name);
+      setRecipientPhone(initialData.recipient.phone);
+      setRecipientCity(initialData.recipient.city);
+      setRecipientSector(initialData.recipient.sector);
+      setRecipientAddress(initialData.recipient.address);
+      setProducts(
+        initialData.products.map(p => ({
+          type: 'personalizado' as ProductType,
+          itemId: p.itemId,
+          name: p.name,
+          sku: p.sku,
+          quantity: p.quantity,
+          price: p.price,
+        }))
+      );
+      setNotes('');
+    }
+  }, [open, initialData]);
 
   // Fetch stores (no composite index needed — filter active client-side)
   const storesQuery = useMemoFirebase(() => {
@@ -259,9 +286,13 @@ export default function CreateOrderForm({ open, onOpenChange, onOrderCreated }: 
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="w-[90vw] max-w-3xl max-h-[90vh] flex flex-col p-0 gap-0">
         <DialogHeader className="p-6 pb-4">
-          <DialogTitle className="text-xl">Nuevo Pedido</DialogTitle>
+          <DialogTitle className="text-xl">
+            {initialData ? `Duplicar Pedido ${initialData.externalOrderReference || ''}` : 'Nuevo Pedido'}
+          </DialogTitle>
           <DialogDescription>
-            Completa los datos para crear un nuevo pedido.
+            {initialData
+              ? 'Revisa y modifica los datos antes de crear el pedido duplicado.'
+              : 'Completa los datos para crear un nuevo pedido.'}
           </DialogDescription>
         </DialogHeader>
 
