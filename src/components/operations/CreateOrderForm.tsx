@@ -178,6 +178,16 @@ export default function CreateOrderForm({ open, onOpenChange, onOrderCreated }: 
     const totalCost = freightCost + fulfillmentCost + serviceFee;
     const cod = paymentType === 'cod' ? Number(codAmount) : 0;
 
+    const now = new Date().toISOString();
+    const initialHistory = [{
+      id: `hist-${Date.now()}`,
+      eventType: 'Status Change' as const,
+      user: { name: user?.name || 'Usuario' },
+      createdAt: now,
+      from: 'Nuevo',
+      to: 'Generado',
+    }];
+
     const newOrder: Order = {
       id: `new-${Date.now()}`,
       trackingId,
@@ -207,12 +217,23 @@ export default function CreateOrderForm({ open, onOpenChange, onOrderCreated }: 
       warehouse: { packingStatus: 'pending' },
       isDraft: false,
       createdBy: user?.uid || 'current-user',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: now,
+      updatedAt: now,
       externalOrderReference: trackingId,
       client: selectedStore.name,
       recipientName,
       recipientPhone,
+      estadoDeEmpaque: 'Pendiente',
+      deliveryAddress: {
+        id: `addr-${Date.now()}`,
+        city: recipientCity,
+        sector: recipientSector,
+        province: recipientCity,
+        addressLine1: recipientAddress,
+      },
+      location: 'Recepción',
+      comments: [],
+      history: initialHistory,
       cashOnDeliveryAmount: cod,
       financials: {
         codAmount: cod,

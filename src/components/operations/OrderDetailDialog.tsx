@@ -26,9 +26,10 @@ import OrderNoveltyTab from './OrderNoveltyTab';
 interface OrderDetailDialogProps {
   order: Order | null;
   onOpenChange: (open: boolean) => void;
+  onOrderUpdate: (order: Order) => void;
 }
 
-export default function OrderDetailDialog({ order, onOpenChange }: OrderDetailDialogProps) {
+export default function OrderDetailDialog({ order, onOpenChange, onOrderUpdate }: OrderDetailDialogProps) {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   const isClient = user?.role === 'client';
@@ -39,9 +40,23 @@ export default function OrderDetailDialog({ order, onOpenChange }: OrderDetailDi
   }
 
   const handleAnular = () => {
-    console.log('Anulando pedido...');
-    // Here would be API call to change status
-    onOpenChange(false); // Close dialog after action
+    const now = new Date().toISOString();
+    const historyEntry = {
+      id: `hist-${Date.now()}`,
+      eventType: 'Status Change' as const,
+      user: { name: user?.name || 'Usuario' },
+      createdAt: now,
+      from: order.status,
+      to: 'Anulado',
+    };
+    onOrderUpdate({
+      ...order,
+      status: 'Anulado',
+      previousStatus: order.status,
+      history: [...(order.history || []), historyEntry],
+      updatedAt: now,
+    });
+    onOpenChange(false);
   }
 
   return (
@@ -103,13 +118,13 @@ export default function OrderDetailDialog({ order, onOpenChange }: OrderDetailDi
 
             <div className="p-6 overflow-y-auto flex-1">
               <TabsContent value="details" className="mt-0">
-                <OrderDetailsTab order={order} />
+                <OrderDetailsTab order={order} onOrderUpdate={onOrderUpdate} />
               </TabsContent>
               <TabsContent value="comments" className="mt-0">
-                <OrderCommentsTab order={order} />
+                <OrderCommentsTab order={order} onOrderUpdate={onOrderUpdate} />
               </TabsContent>
               <TabsContent value="novelty" className="mt-0">
-                <OrderNoveltyTab order={order} />
+                <OrderNoveltyTab order={order} onOrderUpdate={onOrderUpdate} />
               </TabsContent>
               <TabsContent value="history" className="mt-0">
                 <OrderTimelineTab order={order} />

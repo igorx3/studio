@@ -10,6 +10,7 @@ import { CreateNoveltyDialog } from './CreateNoveltyDialog';
 
 interface OrderDetailsTabProps {
   order: Order;
+  onOrderUpdate: (order: Order) => void;
 }
 
 const allStatuses: OrderStatus[] = [
@@ -48,28 +49,45 @@ const ProductsTable = ({ products }: { products: { itemId: string; name: string;
     </Table>
 )
 
-export default function OrderDetailsTab({ order }: OrderDetailsTabProps) {
+export default function OrderDetailsTab({ order, onOrderUpdate }: OrderDetailsTabProps) {
   const { user } = useAuth();
   const isClient = user?.role === 'client';
-  const [currentStatus, setCurrentStatus] = React.useState<OrderStatus>(order.status);
   const [isNoveltyDialogOpen, setIsNoveltyDialogOpen] = React.useState(false);
-  
+
   // Rule: 'Generado' status cannot be re-selected once changed.
   const isStatusGenerated = order.history?.some(h => h.from === 'Generado' && h.to !== 'Generado') ?? (order.status !== 'Generado');
+
+  const applyStatusChange = (newStatus: OrderStatus, comment?: string, photoUrl?: string) => {
+    const now = new Date().toISOString();
+    const historyEntry = {
+      id: `hist-${Date.now()}`,
+      eventType: 'Status Change' as const,
+      user: { name: user?.name || 'Usuario' },
+      createdAt: now,
+      from: order.status,
+      to: newStatus,
+      comment,
+      photoUrl,
+    };
+    onOrderUpdate({
+      ...order,
+      status: newStatus,
+      previousStatus: order.status,
+      history: [...(order.history || []), historyEntry],
+      updatedAt: now,
+    });
+  };
 
   const handleStatusChange = (newStatus: OrderStatus) => {
     if (newStatus === 'Novedad' && !isClient) {
         setIsNoveltyDialogOpen(true);
     } else {
-        setCurrentStatus(newStatus);
-        // API call to update status would go here
+        applyStatusChange(newStatus);
     }
   }
 
-  const handleNoveltySubmit = ({ comment, photo }: { comment: string, photo: File }) => {
-    console.log("Submitting novelty:", { comment, photo });
-    setCurrentStatus('Novedad');
-    // API call to update status with novelty data would go here
+  const handleNoveltySubmit = ({ comment }: { comment: string, photo: File }) => {
+    applyStatusChange('Novedad', comment);
     setIsNoveltyDialogOpen(false);
   }
 
@@ -92,9 +110,9 @@ export default function OrderDetailsTab({ order }: OrderDetailsTabProps) {
                     <div className="flex flex-col">
                         <p className="text-sm text-muted-foreground">Estado</p>
                         {isClient ? (
-                             <Badge className="mt-1 w-fit">{currentStatus}</Badge>
+                             <Badge className="mt-1 w-fit">{order.status}</Badge>
                         ) : (
-                            <Select value={currentStatus} onValueChange={(v) => handleStatusChange(v as OrderStatus)}>
+                            <Select value={order.status} onValueChange={(v) => handleStatusChange(v as OrderStatus)}>
                                 <SelectTrigger className="w-[180px] mt-1">
                                     <SelectValue placeholder="Cambiar estado" />
                                 </SelectTrigger>

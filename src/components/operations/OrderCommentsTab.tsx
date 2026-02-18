@@ -2,6 +2,7 @@
 
 import React from 'react';
 import type { Order, OrderComment } from '@/lib/types';
+import { useAuth } from '@/context/auth-context';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -17,6 +18,7 @@ import { Paperclip } from 'lucide-react';
 
 interface OrderCommentsTabProps {
   order: Order;
+  onOrderUpdate: (order: Order) => void;
 }
 
 const commentSchema = z.object({
@@ -55,15 +57,28 @@ const Comment = ({ comment }: { comment: OrderComment }) => {
     )
 }
 
-export default function OrderCommentsTab({ order }: OrderCommentsTabProps) {
+export default function OrderCommentsTab({ order, onOrderUpdate }: OrderCommentsTabProps) {
+  const { user } = useAuth();
+
   const form = useForm<z.infer<typeof commentSchema>>({
     resolver: zodResolver(commentSchema),
     defaultValues: { comment: '' },
   });
 
   const onSubmit = (values: z.infer<typeof commentSchema>) => {
-    console.log(values);
-    // Here you would typically call an API to add the comment
+    const now = new Date().toISOString();
+    const newComment: OrderComment = {
+      id: `comment-${Date.now()}`,
+      userName: user?.name || 'Usuario',
+      user: { name: user?.name || 'Usuario', avatarUrl: user?.avatarUrl ?? undefined },
+      createdAt: now,
+      text: values.comment,
+    };
+    onOrderUpdate({
+      ...order,
+      comments: [...(order.comments || []), newComment],
+      updatedAt: now,
+    });
     form.reset();
   };
 
