@@ -20,6 +20,7 @@ import {
 
 interface OrderNoveltyTabProps {
   order: Order;
+  onOrderUpdate: (order: Order) => void;
 }
 
 const NoveltyTimelineItem = ({ novelty }: { novelty: OrderEvent }) => (
@@ -45,14 +46,54 @@ const NoveltyTimelineItem = ({ novelty }: { novelty: OrderEvent }) => (
     </div>
 )
 
-export default function OrderNoveltyTab({ order }: OrderNoveltyTabProps) {
+export default function OrderNoveltyTab({ order, onOrderUpdate }: OrderNoveltyTabProps) {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   const isClient = user?.role === 'client';
-  
+
   const noveltyEvents = order.history?.filter(h => h.to === 'Novedad').sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) || [];
 
   const isNoveltyActive = order.status === 'Novedad';
+
+  const handleCancelOrder = () => {
+    const now = new Date().toISOString();
+    const historyEntry = {
+      id: `hist-${Date.now()}`,
+      eventType: 'Status Change' as const,
+      user: { name: user?.name || 'Usuario' },
+      createdAt: now,
+      from: order.status,
+      to: 'Cancelado',
+      comment: 'Cancelado desde gestión de novedades',
+    };
+    onOrderUpdate({
+      ...order,
+      status: 'Cancelado',
+      previousStatus: order.status,
+      history: [...(order.history || []), historyEntry],
+      updatedAt: now,
+    });
+  };
+
+  const handleReschedule = () => {
+    const now = new Date().toISOString();
+    const historyEntry = {
+      id: `hist-${Date.now()}`,
+      eventType: 'Status Change' as const,
+      user: { name: user?.name || 'Usuario' },
+      createdAt: now,
+      from: order.status,
+      to: 'Confirmado',
+      comment: 'Reprogramado desde gestión de novedades',
+    };
+    onOrderUpdate({
+      ...order,
+      status: 'Confirmado',
+      previousStatus: order.status,
+      history: [...(order.history || []), historyEntry],
+      updatedAt: now,
+    });
+  };
 
   if (noveltyEvents.length === 0) {
     return (
@@ -71,7 +112,7 @@ export default function OrderNoveltyTab({ order }: OrderNoveltyTabProps) {
             <CardDescription>Por favor, selecciona una opción para continuar con el pedido.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-3">
-            <Button variant="outline"><Calendar className="mr-2 h-4 w-4" />Reprogramar Entrega</Button>
+            <Button variant="outline" onClick={handleReschedule}><Calendar className="mr-2 h-4 w-4" />Reprogramar Entrega</Button>
             <Button variant="outline"><Pencil className="mr-2 h-4 w-4" />Cambiar Datos de Entrega</Button>
             <AlertDialog>
                 <AlertDialogTrigger asChild>
@@ -86,7 +127,7 @@ export default function OrderNoveltyTab({ order }: OrderNoveltyTabProps) {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Volver</AlertDialogCancel>
-                        <AlertDialogAction className="bg-destructive hover:bg-destructive/90">Confirmar Cancelación</AlertDialogAction>
+                        <AlertDialogAction onClick={handleCancelOrder} className="bg-destructive hover:bg-destructive/90">Confirmar Cancelación</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

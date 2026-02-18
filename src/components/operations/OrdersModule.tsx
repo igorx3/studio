@@ -45,6 +45,11 @@ export function OrdersModule() {
     setOrders(prev => [newOrder, ...prev]);
   };
 
+  const handleOrderUpdate = (updatedOrder: Order) => {
+    setOrders(prev => prev.map(o => o.id === updatedOrder.id ? updatedOrder : o));
+    setSelectedOrder(updatedOrder);
+  };
+
   return (
     <div className="flex flex-col h-full gap-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -109,6 +114,7 @@ export function OrdersModule() {
                     setSelectedOrder(null);
                 }
             }}
+            onOrderUpdate={handleOrderUpdate}
         />
 
         <CreateOrderForm
