@@ -25,7 +25,7 @@ const DetailItem = ({ label, value }: { label: string; value?: React.ReactNode }
     </div>
 );
 
-const ProductsTable = ({ products }: { products: { id: string; name: string; sku: string; quantity: number; declaredValue: number; }[] }) => (
+const ProductsTable = ({ products }: { products: { itemId: string; name: string; sku: string; quantity: number; price: number; }[] }) => (
     <Table>
         <TableHeader>
             <TableRow>
@@ -37,11 +37,11 @@ const ProductsTable = ({ products }: { products: { id: string; name: string; sku
         </TableHeader>
         <TableBody>
             {products.map(p => (
-                <TableRow key={p.id}>
+                <TableRow key={p.itemId}>
                     <TableCell className="font-medium">{p.name}</TableCell>
                     <TableCell>{p.sku}</TableCell>
                     <TableCell className="text-center">{p.quantity}</TableCell>
-                    <TableCell className="text-right">${p.declaredValue.toLocaleString()}</TableCell>
+                    <TableCell className="text-right">${p.price.toLocaleString()}</TableCell>
                 </TableRow>
             ))}
         </TableBody>
@@ -115,8 +115,8 @@ export default function OrderDetailsTab({ order }: OrderDetailsTabProps) {
                     <DetailItem label="Mensajero Asignado" value={order.assignedCourierName} />
                     <DetailItem label="Tipo de Pago" value={order.paymentType} />
                     <DetailItem label="Tipo de Servicio" value={<Badge variant="outline">{order.serviceType}</Badge>} />
-                    {order.thirdPartyCourier && <DetailItem label="Transportadora" value={order.thirdPartyCourier} />}
-                    {order.pickupAddress && <DetailItem label="Dirección de Recogida" value={order.pickupAddress.addressLine1} />}
+                    {order.thirdPartyCarrier && <DetailItem label="Transportadora" value={order.thirdPartyCarrier} />}
+                    {order.pickupAddress && <DetailItem label="Dirección de Recogida" value={order.pickupAddress.address} />}
                 </div>
             </div>
 
@@ -128,9 +128,9 @@ export default function OrderDetailsTab({ order }: OrderDetailsTabProps) {
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
                     <DetailItem label="Nombre" value={order.recipientName} />
                     <DetailItem label="Teléfono" value={order.recipientPhone} />
-                    <DetailItem label="Ciudad" value={order.deliveryAddress.city} />
-                    <DetailItem label="Sector" value={order.deliveryAddress.sector} />
-                    <DetailItem label="Dirección" value={order.deliveryAddress.addressLine1} />
+                    <DetailItem label="Ciudad" value={order.deliveryAddress?.city} />
+                    <DetailItem label="Sector" value={order.deliveryAddress?.sector} />
+                    <DetailItem label="Dirección" value={order.deliveryAddress?.addressLine1} />
                 </div>
             </div>
 
@@ -148,21 +148,21 @@ export default function OrderDetailsTab({ order }: OrderDetailsTabProps) {
             <div>
                 <h4 className="font-semibold mb-4 text-lg">Financiero</h4>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6 items-start">
-                    <DetailItem label="Monto COD" value={`$${order.financials.codAmount.toLocaleString()}`} />
-                    {!isClient && <DetailItem label="Cobrado a Mensajero" value={<Badge variant={order.financials.collectedFromCourier ? 'default' : 'destructive'}>{order.financials.collectedFromCourier ? 'Sí' : 'No'}</Badge>} />}
+                    <DetailItem label="Monto COD" value={`$${order.financials?.codAmount.toLocaleString()}`} />
+                    {!isClient && <DetailItem label="Cobrado a Mensajero" value={<Badge variant={order.financials?.collectedFromCourier ? 'default' : 'destructive'}>{order.financials?.collectedFromCourier ? 'Sí' : 'No'}</Badge>} />}
                     <div className="col-span-2 md:col-span-2 bg-muted p-4 rounded-lg">
                         <p className="font-semibold mb-2">Desglose de Costos</p>
                         <div className="space-y-1 text-sm">
-                            <div className="flex justify-between"><span>Flete:</span> <span>${order.financials.freightCost.toLocaleString()}</span></div>
-                            <div className="flex justify-between"><span>Fulfillment:</span> <span>${order.financials.fulfillmentCost.toLocaleString()}</span></div>
-                            <div className="flex justify-between"><span>Tarifa de Servicio:</span> <span>${order.financials.serviceFee.toLocaleString()}</span></div>
+                            <div className="flex justify-between"><span>Flete:</span> <span>${order.financials?.freightCost.toLocaleString()}</span></div>
+                            <div className="flex justify-between"><span>Fulfillment:</span> <span>${order.financials?.fulfillmentCost.toLocaleString()}</span></div>
+                            <div className="flex justify-between"><span>Tarifa de Servicio:</span> <span>${order.financials?.serviceFee.toLocaleString()}</span></div>
                             <Separator className="my-2 bg-border" />
-                            <div className="flex justify-between font-bold"><span>Total Costos:</span> <span>${order.financials.totalCost.toLocaleString()}</span></div>
+                            <div className="flex justify-between font-bold"><span>Total Costos:</span> <span>${order.financials?.totalCost.toLocaleString()}</span></div>
                         </div>
                         <Separator className="my-3 bg-border" />
                          <div className="flex justify-between font-bold text-primary text-base">
-                            <span>Neto a Liquidar:</span> 
-                            <span>${order.financials.netToLiquidate.toLocaleString()}</span>
+                            <span>Neto a Liquidar:</span>
+                            <span>${order.financials?.netToLiquidate.toLocaleString()}</span>
                          </div>
                     </div>
                 </div>

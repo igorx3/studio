@@ -9,7 +9,7 @@ import { Search, PlusCircle, LayoutGrid, List } from 'lucide-react';
 import Image from 'next/image';
 import { useAuth } from '@/context/auth-context';
 import { ArticleFormDialog } from './ArticleFormDialog';
-import { Card } from '../ui/card';
+import { Card, CardContent } from '../ui/card';
 import { cn } from '@/lib/utils';
 
 interface ArticlesViewProps {
