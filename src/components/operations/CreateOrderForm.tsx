@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,9 +21,11 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
-import { Plus, Trash2 } from 'lucide-react';
-import type { Order, ServiceType, ProductLineItem } from '@/lib/types';
-import { mockStores } from '@/lib/data';
+import { Plus, Trash2, Loader2 } from 'lucide-react';
+import type { Order, ServiceType, ProductLineItem, Store, InventoryItem } from '@/lib/types';
+import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
+import { useAuth } from '@/context/auth-context';
+import { collection, query, where, orderBy } from 'firebase/firestore';
 
 interface CreateOrderFormProps {
   open: boolean;
@@ -32,28 +34,64 @@ interface CreateOrderFormProps {
 }
 
 interface ProductRow {
+  itemId: string | 'custom';
   name: string;
   sku: string;
   quantity: number;
   price: number;
+  isCustom: boolean;
 }
 
-const emptyProduct: ProductRow = { name: '', sku: '', quantity: 1, price: 0 };
+const emptyProduct: ProductRow = {
+  itemId: 'custom',
+  name: '',
+  sku: '',
+  quantity: 1,
+  price: 0,
+  isCustom: true,
+};
 
 export default function CreateOrderForm({ open, onOpenChange, onOrderCreated }: CreateOrderFormProps) {
+  const firestore = useFirestore();
+  const { isUserLoading: isAuthLoading } = useUser();
+  const { user } = useAuth();
+
   const [storeId, setStoreId] = useState('');
   const [serviceType, setServiceType] = useState<ServiceType>('logistics_360');
   const [paymentType, setPaymentType] = useState<'cod' | 'prepaid'>('cod');
   const [codAmount, setCodAmount] = useState('');
-
   const [recipientName, setRecipientName] = useState('');
   const [recipientPhone, setRecipientPhone] = useState('');
   const [recipientCity, setRecipientCity] = useState('');
   const [recipientSector, setRecipientSector] = useState('');
   const [recipientAddress, setRecipientAddress] = useState('');
-
   const [products, setProducts] = useState<ProductRow[]>([{ ...emptyProduct }]);
   const [notes, setNotes] = useState('');
+
+  // Fetch stores
+  const storesQuery = useMemoFirebase(() => {
+    if (isAuthLoading || !firestore) return null;
+    return query(collection(firestore, 'stores'), where('status', '==', 'active'), orderBy('name'));
+  }, [firestore, isAuthLoading]);
+
+  const { data: storesData, isLoading: storesLoading } = useCollection<Store>(storesQuery);
+  const stores = useMemo(() => storesData || [], [storesData]);
+
+  // Fetch inventory items for selected store
+  const inventoryQuery = useMemoFirebase(() => {
+    if (!firestore || !storeId) return null;
+    return query(
+      collection(firestore, 'inventory'),
+      where('storeId', '==', storeId),
+      where('status', '==', 'active'),
+      orderBy('name')
+    );
+  }, [firestore, storeId]);
+
+  const { data: inventoryData, isLoading: inventoryLoading } = useCollection<InventoryItem>(inventoryQuery);
+  const inventoryItems = useMemo(() => inventoryData || [], [inventoryData]);
+
+  const selectedStore = stores.find(s => s.id === storeId);
 
   const resetForm = () => {
     setStoreId('');
@@ -83,13 +121,31 @@ export default function CreateOrderForm({ open, onOpenChange, onOrderCreated }: 
     setProducts(products.filter((_, i) => i !== index));
   };
 
-  const updateProduct = (index: number, field: keyof ProductRow, value: string | number) => {
+  const updateProduct = (index: number, field: keyof ProductRow, value: string | number | boolean) => {
     const updated = [...products];
     updated[index] = { ...updated[index], [field]: value };
     setProducts(updated);
   };
 
-  const selectedStore = mockStores.find(s => s.id === storeId);
+  const handleProductSelect = (index: number, inventoryItemId: string) => {
+    if (inventoryItemId === 'custom') {
+      updateProduct(index, 'itemId', 'custom');
+      updateProduct(index, 'isCustom', true);
+      updateProduct(index, 'name', '');
+      updateProduct(index, 'sku', '');
+      updateProduct(index, 'price', 0);
+    } else {
+      const item = inventoryItems.find(i => i.id === inventoryItemId);
+      if (item) {
+        updateProduct(index, 'itemId', inventoryItemId);
+        updateProduct(index, 'isCustom', false);
+        updateProduct(index, 'name', item.name);
+        updateProduct(index, 'sku', item.sku);
+        updateProduct(index, 'price', item.normalPrice || 0);
+      }
+    }
+  };
+
   const productTotal = products.reduce((sum, p) => sum + p.quantity * p.price, 0);
 
   const canSubmit =
@@ -108,7 +164,7 @@ export default function CreateOrderForm({ open, onOpenChange, onOrderCreated }: 
     const validProducts: ProductLineItem[] = products
       .filter(p => p.name.trim() && p.quantity > 0)
       .map((p, i) => ({
-        itemId: `new-${Date.now()}-${i}`,
+        itemId: p.itemId || `new-${Date.now()}-${i}`,
         name: p.name,
         sku: p.sku || `SKU-${Date.now()}-${i}`,
         quantity: p.quantity,
@@ -150,7 +206,7 @@ export default function CreateOrderForm({ open, onOpenChange, onOrderCreated }: 
       },
       warehouse: { packingStatus: 'pending' },
       isDraft: false,
-      createdBy: 'current-user',
+      createdBy: user?.uid || 'current-user',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       externalOrderReference: trackingId,
@@ -174,6 +230,10 @@ export default function CreateOrderForm({ open, onOpenChange, onOrderCreated }: 
     onOpenChange(false);
   };
 
+  if (!firestore || isAuthLoading) {
+    return null;
+  }
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="w-[90vw] max-w-3xl max-h-[90vh] flex flex-col p-0 gap-0">
@@ -189,12 +249,19 @@ export default function CreateOrderForm({ open, onOpenChange, onOrderCreated }: 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="store">Tienda *</Label>
-              <Select value={storeId} onValueChange={setStoreId}>
+              <Select value={storeId} onValueChange={setStoreId} disabled={storesLoading}>
                 <SelectTrigger id="store">
-                  <SelectValue placeholder="Seleccionar tienda" />
+                  {storesLoading ? (
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Cargando...</span>
+                    </div>
+                  ) : (
+                    <SelectValue placeholder="Seleccionar tienda" />
+                  )}
                 </SelectTrigger>
                 <SelectContent>
-                  {mockStores.map(store => (
+                  {stores.map(store => (
                     <SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>
                   ))}
                 </SelectContent>
@@ -301,62 +368,81 @@ export default function CreateOrderForm({ open, onOpenChange, onOrderCreated }: 
           <div>
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold">Productos</h3>
-              <Button type="button" variant="outline" size="sm" onClick={addProduct}>
+              <Button type="button" variant="outline" size="sm" onClick={addProduct} disabled={!storeId || inventoryLoading}>
                 <Plus className="mr-1 h-3 w-3" />
                 Agregar
               </Button>
             </div>
-            <div className="space-y-3">
-              {products.map((product, index) => (
-                <div key={index} className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-2 items-end">
-                  <div className="space-y-1">
-                    {index === 0 && <Label className="text-xs">Nombre *</Label>}
-                    <Input
-                      placeholder="Nombre del producto"
-                      value={product.name}
-                      onChange={(e) => updateProduct(index, 'name', e.target.value)}
-                    />
+            {!storeId ? (
+              <p className="text-sm text-muted-foreground">Selecciona una tienda para agregar productos.</p>
+            ) : inventoryLoading ? (
+              <div className="flex items-center justify-center py-4 gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="text-sm text-muted-foreground">Cargando productos...</span>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {products.map((product, index) => (
+                  <div key={index} className="grid grid-cols-[auto_1fr_auto_auto_auto_auto] gap-2 items-end">
+                    <div className="space-y-1 w-48">
+                      {index === 0 && <Label className="text-xs">Producto *</Label>}
+                      <Select value={product.itemId} onValueChange={(v) => handleProductSelect(index, v)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="custom">+ Personalizado</SelectItem>
+                          {inventoryItems.map(item => (
+                            <SelectItem key={item.id} value={item.id}>
+                              {item.name} ({item.stockAvailable} disponibles)
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1 flex-1">
+                      {index === 0 && <Label className="text-xs">Nombre *</Label>}
+                      <Input
+                        placeholder="Nombre del producto"
+                        value={product.name}
+                        onChange={(e) => updateProduct(index, 'name', e.target.value)}
+                        disabled={!product.isCustom}
+                      />
+                    </div>
+                    <div className="space-y-1 w-20">
+                      {index === 0 && <Label className="text-xs">Cant. *</Label>}
+                      <Input
+                        type="number"
+                        min="1"
+                        value={product.quantity}
+                        onChange={(e) => updateProduct(index, 'quantity', parseInt(e.target.value) || 1)}
+                      />
+                    </div>
+                    <div className="space-y-1 w-24">
+                      {index === 0 && <Label className="text-xs">Precio (RD$) *</Label>}
+                      <Input
+                        type="number"
+                        min="0"
+                        placeholder="0.00"
+                        value={product.price || ''}
+                        onChange={(e) => updateProduct(index, 'price', parseFloat(e.target.value) || 0)}
+                        disabled={!product.isCustom}
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-10 w-10 text-muted-foreground hover:text-destructive"
+                      onClick={() => removeProduct(index)}
+                      disabled={products.length <= 1}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
-                  <div className="space-y-1 w-24">
-                    {index === 0 && <Label className="text-xs">SKU</Label>}
-                    <Input
-                      placeholder="SKU"
-                      value={product.sku}
-                      onChange={(e) => updateProduct(index, 'sku', e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-1 w-20">
-                    {index === 0 && <Label className="text-xs">Cant. *</Label>}
-                    <Input
-                      type="number"
-                      min="1"
-                      value={product.quantity}
-                      onChange={(e) => updateProduct(index, 'quantity', parseInt(e.target.value) || 1)}
-                    />
-                  </div>
-                  <div className="space-y-1 w-28">
-                    {index === 0 && <Label className="text-xs">Precio (RD$) *</Label>}
-                    <Input
-                      type="number"
-                      min="0"
-                      placeholder="0.00"
-                      value={product.price || ''}
-                      onChange={(e) => updateProduct(index, 'price', parseFloat(e.target.value) || 0)}
-                    />
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-10 w-10 text-muted-foreground hover:text-destructive"
-                    onClick={() => removeProduct(index)}
-                    disabled={products.length <= 1}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
             {productTotal > 0 && (
               <p className="text-sm text-muted-foreground mt-2 text-right">
                 Total productos: <span className="font-medium text-foreground">RD$ {productTotal.toLocaleString()}</span>
