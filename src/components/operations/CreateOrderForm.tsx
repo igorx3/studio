@@ -68,28 +68,26 @@ export default function CreateOrderForm({ open, onOpenChange, onOrderCreated }: 
   const [products, setProducts] = useState<ProductRow[]>([{ ...emptyProduct }]);
   const [notes, setNotes] = useState('');
 
-  // Fetch stores
+  // Fetch stores (no composite index needed — filter active client-side)
   const storesQuery = useMemoFirebase(() => {
     if (isAuthLoading || !firestore) return null;
-    return query(collection(firestore, 'stores'), where('status', '==', 'active'), orderBy('name'));
+    return query(collection(firestore, 'stores'), orderBy('name'));
   }, [firestore, isAuthLoading]);
 
   const { data: storesData, isLoading: storesLoading } = useCollection<Store>(storesQuery);
-  const stores = useMemo(() => storesData || [], [storesData]);
+  const stores = useMemo(() => (storesData || []).filter(s => s.status === 'active'), [storesData]);
 
   // Fetch inventory items for selected store
   const inventoryQuery = useMemoFirebase(() => {
     if (!firestore || !storeId) return null;
     return query(
       collection(firestore, 'inventory'),
-      where('storeId', '==', storeId),
-      where('status', '==', 'active'),
-      orderBy('name')
+      where('storeId', '==', storeId)
     );
   }, [firestore, storeId]);
 
   const { data: inventoryData, isLoading: inventoryLoading } = useCollection<InventoryItem>(inventoryQuery);
-  const inventoryItems = useMemo(() => inventoryData || [], [inventoryData]);
+  const inventoryItems = useMemo(() => (inventoryData || []).filter(i => i.status === 'active'), [inventoryData]);
 
   const selectedStore = stores.find(s => s.id === storeId);
 
