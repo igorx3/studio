@@ -9,6 +9,7 @@ import type { Order, OrderStatus } from "@/lib/types";
 import { OrdersList } from './OrdersList';
 import { OrdersKanban } from './OrdersKanban';
 import OrderDetailDialog from './OrderDetailDialog';
+import CreateOrderForm from './CreateOrderForm';
 
 const submenuItems: { label: string; statusFilter: OrderStatus | OrderStatus[] | null }[] = [
     { label: 'Nuevos', statusFilter: 'Generado' },
@@ -22,23 +23,27 @@ export function OrdersModule() {
   const [view, setView] = useState<'list' | 'kanban'>('list');
   const [activeSubMenu, setActiveSubMenu] = useState<string>('Todos');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  
-  const orders = useMemo(() => mockOrders, []);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [orders, setOrders] = useState<Order[]>(mockOrders);
 
   const filteredOrders = useMemo(() => {
     const activeFilter = submenuItems.find(item => item.label === activeSubMenu);
     if (!activeFilter || !activeFilter.statusFilter) {
       return orders;
     }
-    
+
     const filterValue = activeFilter.statusFilter;
 
     if (Array.isArray(filterValue)) {
       return orders.filter(order => filterValue.includes(order.status));
     }
-    
+
     return orders.filter(order => order.status === filterValue);
   }, [orders, activeSubMenu]);
+
+  const handleOrderCreated = (newOrder: Order) => {
+    setOrders(prev => [newOrder, ...prev]);
+  };
 
   return (
     <div className="flex flex-col h-full gap-4">
@@ -57,7 +62,11 @@ export function OrdersModule() {
                     <Download className="mr-2 h-4 w-4"/>
                     Exportar
                 </Button>
-                <Button className="bg-primary hover:bg-primary/90 text-primary-foreground" size="sm">
+                <Button
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                    size="sm"
+                    onClick={() => setShowCreateForm(true)}
+                >
                     <Plus className="mr-2 h-4 w-4"/>
                     Nuevo Pedido
                 </Button>
@@ -69,8 +78,8 @@ export function OrdersModule() {
                 <Tabs value={activeSubMenu} onValueChange={setActiveSubMenu} defaultValue="Todos">
                     <TabsList className="bg-muted text-muted-foreground">
                         {submenuItems.map(item => (
-                            <TabsTrigger 
-                                key={item.label} 
+                            <TabsTrigger
+                                key={item.label}
                                 value={item.label}
                                 className="data-[state=active]:bg-background data-[state=active]:text-foreground"
                             >
@@ -93,13 +102,19 @@ export function OrdersModule() {
             </TabsContent>
         </Tabs>
 
-        <OrderDetailDialog 
+        <OrderDetailDialog
             order={selectedOrder}
             onOpenChange={(open) => {
                 if (!open) {
                     setSelectedOrder(null);
                 }
             }}
+        />
+
+        <CreateOrderForm
+            open={showCreateForm}
+            onOpenChange={setShowCreateForm}
+            onOrderCreated={handleOrderCreated}
         />
     </div>
   );
