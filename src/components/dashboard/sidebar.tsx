@@ -56,7 +56,7 @@ const mainNavItems = [
   { href: '/dashboard/ubicacion', label: 'Ubicación', icon: MapPin, roles: ['admin', 'operations', 'client'] },
   { href: '/dashboard/rutas', label: 'Rutas', icon: Map, roles: ['admin', 'operations'] },
   { href: '/dashboard/inventario', label: 'Inventario', icon: LayoutGrid, roles: ['admin', 'operations', 'client'] },
-  { href: '/dashboard/dropshipping', label: 'Catálogo Dropshipping', icon: ShoppingBag, roles: ['client'] },
+  { href: '/dashboard/dropshipping', label: 'Catálogo Dropshipping', icon: ShoppingBag, roles: ['admin', 'client'] },
   { href: '/dashboard/dropshipping-management', label: 'Gestión Dropshipping', icon: Briefcase, roles: ['admin', 'operations'] },
 ];
 

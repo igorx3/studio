@@ -114,7 +114,7 @@ export default function DropshippingCatalogPage() {
         );
     }, [items, searchTerm]);
 
-    if (!user || user.role !== 'client') {
+    if (!user || (user.role !== 'client' && user.role !== 'admin')) {
         return (
             <Card>
                 <CardContent className="p-8 text-center">

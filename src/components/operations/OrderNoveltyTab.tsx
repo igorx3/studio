@@ -47,6 +47,7 @@ const NoveltyTimelineItem = ({ novelty }: { novelty: OrderEvent }) => (
 
 export default function OrderNoveltyTab({ order }: OrderNoveltyTabProps) {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const isClient = user?.role === 'client';
   
   const noveltyEvents = order.history?.filter(h => h.to === 'Novedad').sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) || [];
@@ -63,7 +64,7 @@ export default function OrderNoveltyTab({ order }: OrderNoveltyTabProps) {
 
   return (
     <div className="space-y-8">
-      {isClient && isNoveltyActive && (
+      {(isClient || isAdmin) && isNoveltyActive && (
         <Card className="border-primary">
           <CardHeader>
             <CardTitle>Acción Requerida: Resolver Novedad</CardTitle>

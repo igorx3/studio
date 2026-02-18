@@ -30,6 +30,7 @@ interface OrderDetailDialogProps {
 
 export default function OrderDetailDialog({ order, onOpenChange }: OrderDetailDialogProps) {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const isClient = user?.role === 'client';
   const isOpen = order !== null;
 
@@ -61,7 +62,7 @@ export default function OrderDetailDialog({ order, onOpenChange }: OrderDetailDi
                         Imprimir Label
                     </Button>
 
-                    {isClient && (
+                    {(isClient || isAdmin) && (
                       <>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
