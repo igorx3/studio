@@ -126,22 +126,18 @@ export default function CreateOrderForm({ open, onOpenChange, onOrderCreated }: 
   };
 
   const handleProductSelect = (index: number, inventoryItemId: string) => {
-    if (inventoryItemId === 'custom') {
-      updateProduct(index, 'itemId', 'custom');
-      updateProduct(index, 'isCustom', true);
-      updateProduct(index, 'name', '');
-      updateProduct(index, 'sku', '');
-      updateProduct(index, 'price', 0);
-    } else {
-      const item = inventoryItems.find(i => i.id === inventoryItemId);
-      if (item) {
-        updateProduct(index, 'itemId', inventoryItemId);
-        updateProduct(index, 'isCustom', false);
-        updateProduct(index, 'name', item.name);
-        updateProduct(index, 'sku', item.sku);
-        updateProduct(index, 'price', item.normalPrice || 0);
+    setProducts(prev => {
+      const updated = [...prev];
+      if (inventoryItemId === 'custom') {
+        updated[index] = { ...updated[index], itemId: 'custom', isCustom: true, name: '', sku: '', price: 0 };
+      } else {
+        const item = inventoryItems.find(i => i.id === inventoryItemId);
+        if (item) {
+          updated[index] = { ...updated[index], itemId: inventoryItemId, isCustom: false, name: item.name, sku: item.sku, price: item.normalPrice || 0 };
+        }
       }
-    }
+      return updated;
+    });
   };
 
   const productTotal = products.reduce((sum, p) => sum + p.quantity * p.price, 0);
@@ -171,7 +167,7 @@ export default function CreateOrderForm({ open, onOpenChange, onOrderCreated }: 
 
     const rates = selectedStore.rates;
     const freightCost = serviceType !== 'fulfillment' ? rates.freight : 0;
-    const fulfillmentCost = serviceType === 'fulfillment' ? rates.fulfillment : 0;
+    const fulfillmentCost = serviceType !== 'logistics_180' ? rates.fulfillment : 0;
     const serviceFee = rates.serviceFee;
     const totalCost = freightCost + fulfillmentCost + serviceFee;
     const cod = paymentType === 'cod' ? Number(codAmount) : 0;
@@ -475,7 +471,7 @@ export default function CreateOrderForm({ open, onOpenChange, onOrderCreated }: 
                       <span>RD$ {selectedStore.rates.freight.toLocaleString()}</span>
                     </div>
                   )}
-                  {serviceType === 'fulfillment' && (
+                  {serviceType !== 'logistics_180' && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Fulfillment</span>
                       <span>RD$ {selectedStore.rates.fulfillment.toLocaleString()}</span>
@@ -489,7 +485,8 @@ export default function CreateOrderForm({ open, onOpenChange, onOrderCreated }: 
                   <div className="flex justify-between font-medium">
                     <span>Total costos</span>
                     <span>RD$ {(
-                      (serviceType !== 'fulfillment' ? selectedStore.rates.freight : selectedStore.rates.fulfillment) +
+                      (serviceType !== 'fulfillment' ? selectedStore.rates.freight : 0) +
+                      (serviceType !== 'logistics_180' ? selectedStore.rates.fulfillment : 0) +
                       selectedStore.rates.serviceFee
                     ).toLocaleString()}</span>
                   </div>
